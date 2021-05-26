@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Pod
+metadata:
+   name: distry-node
+spec:
+   containers:
+   - name: distry-node
+     image: moratsam/distry:0.1

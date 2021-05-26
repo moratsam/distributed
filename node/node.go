@@ -344,7 +344,7 @@ func (n *node) Bootstrap(ctx context.Context, nodeAddrs []multiaddr.Multiaddr) e
 			n.logger.Info("done looking for peers",
 				zap.Int("peerCount", n.host.Peerstore().Peers().Len()),
 			)
-			fmt.Printf("\n\nmy multiaddr: %v\n\n", n.Multiaddr())
+			//fmt.Printf("\n\nmy multiaddr: %v\n\n", n.Multiaddr())
 		}
 
 		//	fmt.Printf("\n\nhost addrs: %v\n\n", n.host.Addrs())
