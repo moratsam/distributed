@@ -1,0 +1,22 @@
+syntax = "proto3";
+package api;
+
+option go_package = "proto_gen/api";
+
+service Api{
+	rpc Ping(PingRequest) returns (PingResponse);
+
+	rpc RBC(RBCRequest) returns (RBCResponse);
+}
+
+//PING
+message PingRequest{}
+message PingResponse{}
+
+//RBC
+message RBCRequest{
+	string msg = 1;
+}
+message RBCResponse{
+	bool done = 1;
+}

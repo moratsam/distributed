@@ -1,0 +1,6 @@
+#!/bin/bash
+
+protoc --gofast_out=plugins=grpc:.. api.proto
+
+#protoc -I=. -I=$GOPATH/src -I=$GOPATH/src/github.com/gogo/protobuf/protobuf --gofast_out=.. rbc.proto
+protoc --gofast_out=.. entities.proto
