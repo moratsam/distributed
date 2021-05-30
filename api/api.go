@@ -5,8 +5,8 @@ import(
 
 	"go.uber.org/zap"
 
-	apigen "distributed/proto_gen/api"
-	"distributed/node"
+	apigen "distry/proto_gen/api"
+	"distry/node"
 )
 
 type Server struct{
@@ -31,17 +31,17 @@ func (s *Server) Ping(_ context.Context, _ *apigen.PingRequest) (*apigen.PingRes
 	return &apigen.PingResponse{}, nil
 }
 
-//RBC
-func (s *Server) RBC(_ context.Context, request *apigen.RBCRequest) (*apigen.RBCResponse, error){
-	s.logger.Info("handling RBC")
+//Rbc0
+func (s *Server) Rbc0(_ context.Context, request *apigen.Rbc0Request) (*apigen.Rbc0Response, error){
+	s.logger.Info("handling Rbc0")
 
-	done, err := s.node.RBC(request.Msg)
+	done, err := s.node.Rbc0(request.Payload)
 	if err != nil{
-		s.logger.Error("failed RBC", zap.Error(err))
-		return &apigen.RBCResponse{Done: done}, err
+		s.logger.Error("failed Rbc0", zap.Error(err))
+		return &apigen.Rbc0Response{Done: done}, err
 	}
 
-	return &apigen.RBCResponse{Done: done}, nil
+	return &apigen.Rbc0Response{Done: done}, nil
 }
 
 

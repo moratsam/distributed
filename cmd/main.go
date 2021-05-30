@@ -15,9 +15,9 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 
-	"distributed/api"
-	apigen "distributed/proto_gen/api"
-	"distributed/node"
+	"distry/api"
+	apigen "distry/proto_gen/api"
+	"distry/node"
 )
 
 type cfg struct{

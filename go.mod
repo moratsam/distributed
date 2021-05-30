@@ -1,4 +1,4 @@
-module distributed
+module distry
 
 go 1.16
 

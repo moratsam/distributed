@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: distry-node 
+  labels:
+    app: distry
+spec:
+  selector:
+    matchLabels:
+      app: distry
+  template:
+    metadata:
+      labels:
+        app: distry
+    spec:
+      containers:
+      - name: distry-node
+        image: moratsam/distry:0.1
+

@@ -1,0 +1,35 @@
+syntax = "proto3";
+package messages;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option go_package = "proto_gen/messages";
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+
+message Rbc0{
+	/*
+	enum Type{
+		UNKNOWN = 0;
+		INIT = 1;
+		ECHO = 2;
+		READY = 3;
+	}
+	*/
+
+	string sender_id = 1;
+	string protocol_id = 2;
+	uint32 type = 3;
+	string payload = 4;
+	string signature = 5;
+}
+
+message Message{
+	enum Type{
+		UNKNOWN = 0;
+		RBC0 = 1;
+	}
+
+	Type type = 1;
+	Rbc0 rbc0 = 2;
+}

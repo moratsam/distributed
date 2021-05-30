@@ -6,17 +6,17 @@ option go_package = "proto_gen/api";
 service Api{
 	rpc Ping(PingRequest) returns (PingResponse);
 
-	rpc RBC(RBCRequest) returns (RBCResponse);
+	rpc Rbc0(Rbc0Request) returns (Rbc0Response);
 }
 
 //PING
 message PingRequest{}
 message PingResponse{}
 
-//RBC
-message RBCRequest{
-	string msg = 1;
+//Rbc0
+message Rbc0Request{
+	string payload = 1;
 }
-message RBCResponse{
+message Rbc0Response{
 	bool done = 1;
 }

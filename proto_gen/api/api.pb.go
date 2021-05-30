@@ -105,26 +105,26 @@ func (m *PingResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_PingResponse proto.InternalMessageInfo
 
-//RBC
-type RBCRequest struct {
-	Msg                  string   `protobuf:"bytes,1,opt,name=msg,proto3" json:"msg,omitempty"`
+//Rbc0
+type Rbc0Request struct {
+	Payload              string   `protobuf:"bytes,1,opt,name=payload,proto3" json:"payload,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *RBCRequest) Reset()         { *m = RBCRequest{} }
-func (m *RBCRequest) String() string { return proto.CompactTextString(m) }
-func (*RBCRequest) ProtoMessage()    {}
-func (*RBCRequest) Descriptor() ([]byte, []int) {
+func (m *Rbc0Request) Reset()         { *m = Rbc0Request{} }
+func (m *Rbc0Request) String() string { return proto.CompactTextString(m) }
+func (*Rbc0Request) ProtoMessage()    {}
+func (*Rbc0Request) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00212fb1f9d3bf1c, []int{2}
 }
-func (m *RBCRequest) XXX_Unmarshal(b []byte) error {
+func (m *Rbc0Request) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *RBCRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *Rbc0Request) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_RBCRequest.Marshal(b, m, deterministic)
+		return xxx_messageInfo_Rbc0Request.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -134,44 +134,44 @@ func (m *RBCRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
-func (m *RBCRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_RBCRequest.Merge(m, src)
+func (m *Rbc0Request) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Rbc0Request.Merge(m, src)
 }
-func (m *RBCRequest) XXX_Size() int {
+func (m *Rbc0Request) XXX_Size() int {
 	return m.Size()
 }
-func (m *RBCRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_RBCRequest.DiscardUnknown(m)
+func (m *Rbc0Request) XXX_DiscardUnknown() {
+	xxx_messageInfo_Rbc0Request.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_RBCRequest proto.InternalMessageInfo
+var xxx_messageInfo_Rbc0Request proto.InternalMessageInfo
 
-func (m *RBCRequest) GetMsg() string {
+func (m *Rbc0Request) GetPayload() string {
 	if m != nil {
-		return m.Msg
+		return m.Payload
 	}
 	return ""
 }
 
-type RBCResponse struct {
+type Rbc0Response struct {
 	Done                 bool     `protobuf:"varint,1,opt,name=done,proto3" json:"done,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *RBCResponse) Reset()         { *m = RBCResponse{} }
-func (m *RBCResponse) String() string { return proto.CompactTextString(m) }
-func (*RBCResponse) ProtoMessage()    {}
-func (*RBCResponse) Descriptor() ([]byte, []int) {
+func (m *Rbc0Response) Reset()         { *m = Rbc0Response{} }
+func (m *Rbc0Response) String() string { return proto.CompactTextString(m) }
+func (*Rbc0Response) ProtoMessage()    {}
+func (*Rbc0Response) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00212fb1f9d3bf1c, []int{3}
 }
-func (m *RBCResponse) XXX_Unmarshal(b []byte) error {
+func (m *Rbc0Response) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *RBCResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *Rbc0Response) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_RBCResponse.Marshal(b, m, deterministic)
+		return xxx_messageInfo_Rbc0Response.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -181,19 +181,19 @@ func (m *RBCResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) 
 		return b[:n], nil
 	}
 }
-func (m *RBCResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_RBCResponse.Merge(m, src)
+func (m *Rbc0Response) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Rbc0Response.Merge(m, src)
 }
-func (m *RBCResponse) XXX_Size() int {
+func (m *Rbc0Response) XXX_Size() int {
 	return m.Size()
 }
-func (m *RBCResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_RBCResponse.DiscardUnknown(m)
+func (m *Rbc0Response) XXX_DiscardUnknown() {
+	xxx_messageInfo_Rbc0Response.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_RBCResponse proto.InternalMessageInfo
+var xxx_messageInfo_Rbc0Response proto.InternalMessageInfo
 
-func (m *RBCResponse) GetDone() bool {
+func (m *Rbc0Response) GetDone() bool {
 	if m != nil {
 		return m.Done
 	}
@@ -203,27 +203,27 @@ func (m *RBCResponse) GetDone() bool {
 func init() {
 	proto.RegisterType((*PingRequest)(nil), "api.PingRequest")
 	proto.RegisterType((*PingResponse)(nil), "api.PingResponse")
-	proto.RegisterType((*RBCRequest)(nil), "api.RBCRequest")
-	proto.RegisterType((*RBCResponse)(nil), "api.RBCResponse")
+	proto.RegisterType((*Rbc0Request)(nil), "api.Rbc0Request")
+	proto.RegisterType((*Rbc0Response)(nil), "api.Rbc0Response")
 }
 
 func init() { proto.RegisterFile("api.proto", fileDescriptor_00212fb1f9d3bf1c) }
 
 var fileDescriptor_00212fb1f9d3bf1c = []byte{
-	// 194 bytes of a gzipped FileDescriptorProto
+	// 195 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x4c, 0x2c, 0xc8, 0xd4,
 	0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x4e, 0x2c, 0xc8, 0x54, 0xe2, 0xe5, 0xe2, 0x0e, 0xc8,
 	0xcc, 0x4b, 0x0f, 0x4a, 0x2d, 0x2c, 0x4d, 0x2d, 0x2e, 0x51, 0xe2, 0xe3, 0xe2, 0x81, 0x70, 0x8b,
-	0x0b, 0xf2, 0xf3, 0x8a, 0x53, 0x95, 0xe4, 0xb8, 0xb8, 0x82, 0x9c, 0x9c, 0xa1, 0xb2, 0x42, 0x02,
-	0x5c, 0xcc, 0xb9, 0xc5, 0xe9, 0x12, 0x8c, 0x0a, 0x8c, 0x1a, 0x9c, 0x41, 0x20, 0xa6, 0x92, 0x22,
-	0x17, 0x37, 0x58, 0x1e, 0xa2, 0x5c, 0x48, 0x88, 0x8b, 0x25, 0x25, 0x3f, 0x2f, 0x15, 0xac, 0x82,
-	0x23, 0x08, 0xcc, 0x36, 0x8a, 0xe1, 0x62, 0x76, 0x2c, 0xc8, 0x14, 0xd2, 0xe6, 0x62, 0x01, 0x99,
-	0x2c, 0x24, 0xa0, 0x07, 0x72, 0x01, 0x92, 0x9d, 0x52, 0x82, 0x48, 0x22, 0x50, 0x73, 0x34, 0xb8,
-	0x98, 0x83, 0x9c, 0x9c, 0x85, 0xf8, 0xc1, 0x32, 0x08, 0x07, 0x48, 0x09, 0x20, 0x04, 0x20, 0x2a,
-	0x9d, 0xe4, 0x4f, 0x3c, 0x92, 0x63, 0xbc, 0xf0, 0x48, 0x8e, 0xf1, 0xc1, 0x23, 0x39, 0xc6, 0x19,
-	0x8f, 0xe5, 0x18, 0xa2, 0x78, 0xc1, 0xbe, 0x8b, 0x4f, 0x4f, 0xcd, 0xd3, 0x4f, 0x2c, 0xc8, 0x4c,
-	0x62, 0x03, 0x73, 0x8d, 0x01, 0x01, 0x00, 0x00, 0xff, 0xff, 0x09, 0x82, 0xba, 0x31, 0xf9, 0x00,
-	0x00, 0x00,
+	0x0b, 0xf2, 0xf3, 0x8a, 0x53, 0x95, 0xd4, 0xb9, 0xb8, 0x83, 0x92, 0x92, 0x0d, 0xa0, 0xd2, 0x42,
+	0x12, 0x5c, 0xec, 0x05, 0x89, 0x95, 0x39, 0xf9, 0x89, 0x29, 0x12, 0x8c, 0x0a, 0x8c, 0x1a, 0x9c,
+	0x41, 0x30, 0xae, 0x92, 0x12, 0x17, 0x0f, 0x44, 0x21, 0x44, 0xa3, 0x90, 0x10, 0x17, 0x4b, 0x4a,
+	0x7e, 0x5e, 0x2a, 0x58, 0x19, 0x47, 0x10, 0x98, 0x6d, 0x14, 0xcf, 0xc5, 0xec, 0x58, 0x90, 0x29,
+	0xa4, 0xcd, 0xc5, 0x02, 0xb2, 0x43, 0x48, 0x40, 0x0f, 0xe4, 0x16, 0x24, 0xdb, 0xa5, 0x04, 0x91,
+	0x44, 0xa0, 0xe6, 0x68, 0x73, 0xb1, 0x80, 0xcc, 0x85, 0x2a, 0x46, 0x72, 0x0b, 0x54, 0x31, 0xb2,
+	0xa5, 0x4e, 0xf2, 0x27, 0x1e, 0xc9, 0x31, 0x5e, 0x78, 0x24, 0xc7, 0xf8, 0xe0, 0x91, 0x1c, 0xe3,
+	0x8c, 0xc7, 0x72, 0x0c, 0x51, 0xbc, 0x60, 0xaf, 0xc6, 0xa7, 0xa7, 0xe6, 0xe9, 0x27, 0x16, 0x64,
+	0x26, 0xb1, 0x81, 0xb9, 0xc6, 0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0xfa, 0x88, 0xf6, 0x12, 0x06,
+	0x01, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -239,7 +239,7 @@ const _ = grpc.SupportPackageIsVersion4
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type ApiClient interface {
 	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
-	RBC(ctx context.Context, in *RBCRequest, opts ...grpc.CallOption) (*RBCResponse, error)
+	Rbc0(ctx context.Context, in *Rbc0Request, opts ...grpc.CallOption) (*Rbc0Response, error)
 }
 
 type apiClient struct {
@@ -259,9 +259,9 @@ func (c *apiClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc.Call
 	return out, nil
 }
 
-func (c *apiClient) RBC(ctx context.Context, in *RBCRequest, opts ...grpc.CallOption) (*RBCResponse, error) {
-	out := new(RBCResponse)
-	err := c.cc.Invoke(ctx, "/api.Api/RBC", in, out, opts...)
+func (c *apiClient) Rbc0(ctx context.Context, in *Rbc0Request, opts ...grpc.CallOption) (*Rbc0Response, error) {
+	out := new(Rbc0Response)
+	err := c.cc.Invoke(ctx, "/api.Api/Rbc0", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +271,7 @@ func (c *apiClient) RBC(ctx context.Context, in *RBCRequest, opts ...grpc.CallOp
 // ApiServer is the server API for Api service.
 type ApiServer interface {
 	Ping(context.Context, *PingRequest) (*PingResponse, error)
-	RBC(context.Context, *RBCRequest) (*RBCResponse, error)
+	Rbc0(context.Context, *Rbc0Request) (*Rbc0Response, error)
 }
 
 // UnimplementedApiServer can be embedded to have forward compatible implementations.
@@ -281,8 +281,8 @@ type UnimplementedApiServer struct {
 func (*UnimplementedApiServer) Ping(ctx context.Context, req *PingRequest) (*PingResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
 }
-func (*UnimplementedApiServer) RBC(ctx context.Context, req *RBCRequest) (*RBCResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RBC not implemented")
+func (*UnimplementedApiServer) Rbc0(ctx context.Context, req *Rbc0Request) (*Rbc0Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Rbc0 not implemented")
 }
 
 func RegisterApiServer(s *grpc.Server, srv ApiServer) {
@@ -307,20 +307,20 @@ func _Api_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Api_RBC_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RBCRequest)
+func _Api_Rbc0_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Rbc0Request)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ApiServer).RBC(ctx, in)
+		return srv.(ApiServer).Rbc0(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/api.Api/RBC",
+		FullMethod: "/api.Api/Rbc0",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ApiServer).RBC(ctx, req.(*RBCRequest))
+		return srv.(ApiServer).Rbc0(ctx, req.(*Rbc0Request))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -334,8 +334,8 @@ var _Api_serviceDesc = grpc.ServiceDesc{
 			Handler:    _Api_Ping_Handler,
 		},
 		{
-			MethodName: "RBC",
-			Handler:    _Api_RBC_Handler,
+			MethodName: "Rbc0",
+			Handler:    _Api_Rbc0_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -396,7 +396,7 @@ func (m *PingResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *RBCRequest) Marshal() (dAtA []byte, err error) {
+func (m *Rbc0Request) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -406,12 +406,12 @@ func (m *RBCRequest) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *RBCRequest) MarshalTo(dAtA []byte) (int, error) {
+func (m *Rbc0Request) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *RBCRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *Rbc0Request) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -420,17 +420,17 @@ func (m *RBCRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i -= len(m.XXX_unrecognized)
 		copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	if len(m.Msg) > 0 {
-		i -= len(m.Msg)
-		copy(dAtA[i:], m.Msg)
-		i = encodeVarintApi(dAtA, i, uint64(len(m.Msg)))
+	if len(m.Payload) > 0 {
+		i -= len(m.Payload)
+		copy(dAtA[i:], m.Payload)
+		i = encodeVarintApi(dAtA, i, uint64(len(m.Payload)))
 		i--
 		dAtA[i] = 0xa
 	}
 	return len(dAtA) - i, nil
 }
 
-func (m *RBCResponse) Marshal() (dAtA []byte, err error) {
+func (m *Rbc0Response) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -440,12 +440,12 @@ func (m *RBCResponse) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *RBCResponse) MarshalTo(dAtA []byte) (int, error) {
+func (m *Rbc0Response) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *RBCResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *Rbc0Response) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -502,13 +502,13 @@ func (m *PingResponse) Size() (n int) {
 	return n
 }
 
-func (m *RBCRequest) Size() (n int) {
+func (m *Rbc0Request) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	l = len(m.Msg)
+	l = len(m.Payload)
 	if l > 0 {
 		n += 1 + l + sovApi(uint64(l))
 	}
@@ -518,7 +518,7 @@ func (m *RBCRequest) Size() (n int) {
 	return n
 }
 
-func (m *RBCResponse) Size() (n int) {
+func (m *Rbc0Response) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -641,7 +641,7 @@ func (m *PingResponse) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *RBCRequest) Unmarshal(dAtA []byte) error {
+func (m *Rbc0Request) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -664,15 +664,15 @@ func (m *RBCRequest) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: RBCRequest: wiretype end group for non-group")
+			return fmt.Errorf("proto: Rbc0Request: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: RBCRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: Rbc0Request: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Msg", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Payload", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -700,7 +700,7 @@ func (m *RBCRequest) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Msg = string(dAtA[iNdEx:postIndex])
+			m.Payload = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -724,7 +724,7 @@ func (m *RBCRequest) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *RBCResponse) Unmarshal(dAtA []byte) error {
+func (m *Rbc0Response) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -747,10 +747,10 @@ func (m *RBCResponse) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: RBCResponse: wiretype end group for non-group")
+			return fmt.Errorf("proto: Rbc0Response: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: RBCResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: Rbc0Response: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
