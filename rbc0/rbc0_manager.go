@@ -13,14 +13,14 @@ import(
 //struct to keep tab on a rbc round
 type roundTab struct{
 	//stage this node is in in regards to a rbc round.
-	//'1':INIT, '2':ECHO, '3':READY
+	//'1':INIT, '2':ECHO, '3':READY, '4':ACCEPTED
 	localStage uint32;
 	peersStageTotals map[uint32]int; //map [ STAGE -> number of all nodes in stage STAGE ]
 }
 
 type Manager struct{
 	logger	*zap.Logger
-	omniManager *omni.OmniManager
+	omniManager *omni.Manager
 
 	//map [PROTOCOL_ID -> message payload ]
 	msgPayloadMap map[string]string
@@ -41,7 +41,7 @@ type Manager struct{
 	protocolCnt int
 }
 
-func NewManager(logger *zap.Logger, peersNum int, omniManager *omni.OmniManager) *Manager{
+func NewManager(logger *zap.Logger, peersNum int, omniManager *omni.Manager) *Manager{
 	if logger == nil{
 		logger = zap.NewNop()
 	}
@@ -112,7 +112,6 @@ func (m *Manager) checkRound(protocolID string){
 	inits := m.roundTabMap[protocolID].peersStageTotals[1]
 	echos := m.roundTabMap[protocolID].peersStageTotals[2]
 	readys := m.roundTabMap[protocolID].peersStageTotals[3]
-
 	if localStage == 4{ //received messages after already accepted, just ignore
 		return
 	}

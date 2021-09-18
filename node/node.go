@@ -66,7 +66,7 @@ type node struct{
 
 	bootstrapOnly bool
 
-	omniManager *omni.OmniManager
+	omniManager *omni.Manager
 	rbc0Manager *rbc0.Manager
 
 }
@@ -347,8 +347,8 @@ func (n *node) Bootstrap(ctx context.Context, nodeAddrs []multiaddr.Multiaddr) e
 		return nil
 	}
 
-	n.logger.Debug("setting up OmniManager")
-	omniManager, err := omni.NewOmniManager(n.logger, n.ID(), n.kadDHT, n.ps)
+	n.logger.Debug("setting up Manager")
+	omniManager, err := omni.NewManager(n.logger, n.ID(), n.kadDHT, n.ps)
 	if err != nil{
 		return err
 	}

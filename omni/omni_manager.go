@@ -22,8 +22,8 @@ const (
 )
 
 
-//OmniManager manages omnidisk traffic through the pubsub and implements operations
-type OmniManager struct{
+//Manager manages omnidisk traffic through the pubsub and implements operations
+type Manager struct{
 	logger		*zap.Logger
 	NodeID		peer.ID
 	kadDHT		*dht.IpfsDHT
@@ -41,13 +41,13 @@ type OmniManager struct{
 //---------------------------<HELPERS>
 //---------------------------</HELPERS>
 //---------------------------<SETUP>
-func NewOmniManager(logger *zap.Logger, nodeID peer.ID, kadDHT *dht.IpfsDHT, ps *pubsub.PubSub) (*OmniManager, error){
+func NewManager(logger *zap.Logger, nodeID peer.ID, kadDHT *dht.IpfsDHT, ps *pubsub.PubSub) (*Manager, error){
 	if logger == nil{
 		logger = zap.NewNop()
 	}
 
 
-	om := &OmniManager{
+	m := &Manager{
 		logger:				logger,
 		NodeID:				nodeID,
 		ps:					ps,
@@ -55,15 +55,15 @@ func NewOmniManager(logger *zap.Logger, nodeID peer.ID, kadDHT *dht.IpfsDHT, ps 
 		msgPublishers:		make([]messages.Publisher, 0),
 	}
 
-	if err := om.joinOmniNet(); err != nil{
-		om.logger.Error("failed joining omni network")
+	if err := m.joinOmniNet(); err != nil{
+		m.logger.Error("failed joining omni network")
 		return nil, err
 	}
 
-	return om, nil
+	return m, nil
 }
 
-func (om *OmniManager) joinOmniNet() error{
+func (m *Manager) joinOmniNet() error{
 	cleanup := func(topic *pubsub.Topic, subscription *pubsub.Subscription){
 		if topic != nil{
 			_ = topic.Close()
@@ -73,27 +73,27 @@ func (om *OmniManager) joinOmniNet() error{
 		}
 	}
 
-	om.logger.Debug("joining omnidisk topic")
-	topic, err := om.ps.Join(topicName)
+	m.logger.Debug("joining omnidisk topic")
+	topic, err := m.ps.Join(topicName)
 	if err != nil{
-		om.logger.Error("failed joining omni topic", zap.Error(err))
+		m.logger.Error("failed joining omni topic", zap.Error(err))
 		return err
 	}
 
-	om.logger.Debug("subscribing to omni topic")
+	m.logger.Debug("subscribing to omni topic")
 	subscription, err := topic.Subscribe()
 	if err != nil{
-		om.logger.Error("subscribing to omni topic: FAILED", zap.Error(err))
+		m.logger.Error("subscribing to omni topic: FAILED", zap.Error(err))
 		cleanup(topic, subscription)
 		return err
 	}
-	om.logger.Debug("successfuly joined omni network")
+	m.logger.Debug("successfuly joined omni network")
 
-	om.topic = topic
-	om.subscription = subscription
+	m.topic = topic
+	m.subscription = subscription
 
-	om.logger.Debug("launching omni receiver routine")
-	go om.omniReceiver()
+	m.logger.Debug("launching omni receiver routine")
+	go m.omniReceiver()
 
 	return nil
 }
@@ -102,25 +102,25 @@ func (om *OmniManager) joinOmniNet() error{
 //input: msg
 //complete it (with SenderID or Signature etc..),
 //then marshal & publish to omni network
-func (om *OmniManager) OmniPublisher(msg messages.Message) error{
+func (m *Manager) OmniPublisher(msg messages.Message) error{
 	var pb *genmsg.Message
 	switch msg.(type){
 		case *messages.MsgRbc0:
 			rbc0 := msg.(*messages.MsgRbc0)
-			(*rbc0).SenderID = om.NodeID.String()
+			(*rbc0).SenderID = m.NodeID.String()
 			pb = (*rbc0).MarshalToProtobuf()
 		default:
-			om.logger.Error("trying to omni-publish foreign msg type")
+			m.logger.Error("trying to omni-publish foreign msg type")
 			return errors.New("foreign msg type")
 	}
 	out, err := pb.Marshal()
 	if err != nil{
-		om.logger.Error("failed marshalling omni message", zap.Error(err))
+		m.logger.Error("failed marshalling omni message", zap.Error(err))
 		return errors.Wrap(err, "marshalling omni message")
 	}
 
-	if err := om.topic.Publish(context.Background(), out); err != nil{
-		om.logger.Error("failed publishing omni message", zap.Error(err))
+	if err := m.topic.Publish(context.Background(), out); err != nil{
+		m.logger.Error("failed publishing omni message", zap.Error(err))
 		return errors.Wrap(err, "publishing omni message")
 	}
 
@@ -129,17 +129,17 @@ func (om *OmniManager) OmniPublisher(msg messages.Message) error{
 
 //receive messages from omni network, process them a bit (verify signature)
 //pass them to messageForwarder which will dispatch them to other parts of the node
-func (om *OmniManager) omniReceiver(){
+func (m *Manager) omniReceiver(){
 	pub, sub := messages.NewSubscription()
-	go om.messageForwarder(sub)
+	go m.messageForwarder(sub)
 
 	for{
-		//om.logger.Debug("received omni msg")
-		omniMsg, err := om.subscription.Next(context.Background())
+		//m.logger.Debug("received omni msg")
+		omniMsg, err := m.subscription.Next(context.Background())
 		if err != nil{
-			om.logger.Error("failed receiving omni message", zap.Error(err))
+			m.logger.Error("failed receiving omni message", zap.Error(err))
 		}
-		if omniMsg.ReceivedFrom == om.NodeID{
+		if omniMsg.ReceivedFrom == m.NodeID{
 			continue
 		}
 		/*
@@ -147,7 +147,7 @@ func (om *OmniManager) omniReceiver(){
 
 		in := genmsg.Message{}
 		if err := in.Unmarshal(omniMsg.Data); err != nil{
-			om.logger.Warn("cannot unmarshal omni message. Ignoring", zap.Error(err))
+			m.logger.Warn("cannot unmarshal omni message. Ignoring", zap.Error(err))
 			continue;
 		}
 
@@ -157,39 +157,39 @@ func (om *OmniManager) omniReceiver(){
 		msg := messages.UnmarshalFromProtobuf(&in).(messages.MsgRbc0)
 
 		if err := pub.Publish(msg); err != nil{
-			om.logger.Error("failed passing omni message to messageForwarder", zap.Error(err))
+			m.logger.Error("failed passing omni message to messageForwarder", zap.Error(err))
 		}
 	}
 }
 
 //forward messages received from omni network to other parts of the node (like rbc0)
-func (om *OmniManager) messageForwarder(sub messages.Subscriber){
+func (m *Manager) messageForwarder(sub messages.Subscriber){
 	for{
 		msg, err := sub.Next()
 		if err != nil{
-			om.logger.Error("failed receiving msg from omniReceiver", zap.Error(err))
+			m.logger.Error("failed receiving msg from omniReceiver", zap.Error(err))
 			continue
 		}
 
-		om.msgPublishersLock.Lock()
-		for _, pub := range om.msgPublishers{
+		m.msgPublishersLock.Lock()
+		for _, pub := range m.msgPublishers{
 			if pub.Closed(){
 				continue
 			} else if err := pub.Publish(msg); err != nil{
-				om.logger.Error("failed forwarding message", zap.Error(err))
+				m.logger.Error("failed forwarding message", zap.Error(err))
 			}
 		}
-		om.msgPublishersLock.Unlock()
+		m.msgPublishersLock.Unlock()
 	}
 }
 
 //other parts of the node can call this to receive subscriber end of channel
 //over which messageForwarder will publish messages
-func (om *OmniManager) SubscribeToMessages() messages.Subscriber{
+func (m *Manager) SubscribeToMessages() messages.Subscriber{
 	pub, sub := messages.NewSubscription()
-	om.msgPublishersLock.Lock()
-	defer om.msgPublishersLock.Unlock()
-	om.msgPublishers = append(om.msgPublishers, pub)
+	m.msgPublishersLock.Lock()
+	defer m.msgPublishersLock.Unlock()
+	m.msgPublishers = append(m.msgPublishers, pub)
 
 	return sub
 }
