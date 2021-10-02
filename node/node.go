@@ -429,7 +429,7 @@ func (n *node) Rbc0(payload string) (bool, error){
 		return false, errors.New("can't send message on a bootstrap-only node")
 	}
 
-	return n.rbc0Manager.InitBroadcast(n.ID().Pretty(), payload)
+	return n.rbc0Manager.Broadcast(n.ID().Pretty(), payload)
 }
 
 

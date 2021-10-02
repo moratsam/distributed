@@ -1,8 +1,8 @@
 package rbc0
 
 import(
-	_"fmt"
 	"strconv"
+	"sync"
 
 	"go.uber.org/zap"
 
@@ -38,6 +38,12 @@ type Manager struct{
 	//as per bracha's article, each time msg INIT is broadcasted it needs a new protocolID.
 	//this is implemented using a counter, which increments after each INIT bcast
 	protocolCnt int
+
+	//this Manager sends ACCEPTED rbc messages via msgPublisher to msgPublishers
+	//other parts of the node are on the subscription end of the msgPublishers
+	msgPublisher		messages.Publisher
+	msgPublishers		[]messages.Publisher
+	msgPublishersLock	sync.RWMutex
 }
 
 func NewManager(logger *zap.Logger, peersNum int, omniManager *omni.Manager) *Manager{
@@ -45,18 +51,23 @@ func NewManager(logger *zap.Logger, peersNum int, omniManager *omni.Manager) *Ma
 		logger = zap.NewNop()
 	}
 
+	pub, sub := messages.NewSubscription()
+
 	m := &Manager{
-		logger:				logger,
-		omniManager:		omniManager,
-		roundInfoMap:		make(map[string]*roundInfo),
-		peersNum:			peersNum,
+		logger:			logger,
+		omniManager:	omniManager,
+		roundInfoMap:	make(map[string]*roundInfo),
+		peersNum:		peersNum,
+		msgPublisher:	pub,
+		msgPublishers:	make([]messages.Publisher, 0),
 	}
 
-	go m.msgReceiver()
+	go m.messageForwarder(sub)
+	go m.omniMsgReceiver()
 	return m
 }
 
-func (m *Manager) msgReceiver(){
+func (m *Manager) omniMsgReceiver(){
 	sub := m.omniManager.SubscribeToMessages()
 
 	for{
@@ -82,13 +93,7 @@ func (m *Manager) msgReceiver(){
 		}
 		if !exists{ //NEW MESSAGE ROUND (NEW PROTOCOL_ID)
 			m.logger.Debug("new message round")
-			var ri roundInfo
-			ri.localStage = 0
-			ri.peersPerStage = map[uint32]int{1:0, 2:0, 3:0}
-			ri.payload = msg.Payload
-			ri.stageOfPeer = make(map[string]uint32)
-
-			m.roundInfoMap[msg.ProtocolID] = &ri
+			m.instantiateRoundInfo(msg.ProtocolID, msg.Payload)
 			m.roundInfoMap[msg.ProtocolID].peersPerStage[msg.Type]++
 		} else { //UPDATE ROUND
 			senderNodeStage, exists := thisRoundInfo.stageOfPeer[msg.SenderID]
@@ -145,6 +150,13 @@ func (m *Manager) checkRound(protocolID string){
 			zap.String("protocolID", protocolID),
 			zap.String("pld", m.roundInfoMap[protocolID].payload),
 		)
+
+		//send out accepted message to other the messageForwarder
+		var msg messages.MsgRbc0
+		msg.Payload = m.roundInfoMap[protocolID].payload
+		if err := m.msgPublisher.Publish(msg); err != nil{
+			m.logger.Error("failed passing rbc message to messageForwarder")
+		}
 		//cleanup round resources
 		m.roundInfoMap[protocolID].payload = ""
 		m.roundInfoMap[protocolID].peersPerStage = nil
@@ -170,16 +182,56 @@ func (m *Manager) broadcast(protocolID string, stage uint32){
 	}
 }
 
-func (m *Manager) InitBroadcast(nodeID, payload string) (bool, error){
+
+//forward messages received from omni network to other parts of the node (like rbc0)
+func (m *Manager) messageForwarder(sub messages.Subscriber){
+	for{
+		msg, err := sub.Next()
+		if err != nil{
+			m.logger.Error("failer receiving msg from rbc receiver", zap.Error(err))
+			continue
+		}
+
+		m.msgPublishersLock.Lock()
+		for _, pub := range m.msgPublishers{
+			if pub.Closed(){
+				continue
+			} else if err := pub.Publish(msg); err != nil{
+				m.logger.Error("failed forwarding messsage", zap.Error(err))
+			}
+		}
+		m.msgPublishersLock.Unlock()
+	}
+}
+
+
+//other parts of the node can call this to receive subscriber end of channel
+//over which messageForwarder will publish messages
+func (m *Manager) SubscribeToMessages() messages.Subscriber{
+	pub, sub := messages.NewSubscription()
+	m.msgPublishersLock.Lock()
+	defer m.msgPublishersLock.Unlock()
+	m.msgPublishers = append(m.msgPublishers, pub)
+
+	return sub
+}
+
+func (m *Manager) Broadcast(nodeID, payload string) (bool, error){
 	protocolID := nodeID + "_" + strconv.Itoa(m.protocolCnt)
 	m.instantiateRoundInfo(protocolID, payload)
+	sub := m.SubscribeToMessages()
 
 	m.broadcast(protocolID, 1)
 	m.logger.Debug("sending rbc0 INIT: DONE", zap.String("protocolID", protocolID))
-
 	m.protocolCnt++
-	//TODO
+
 	//wait for message to be ACCEPTADO
+	//TODO timeout ?
+	_, err := sub.Next()
+	sub.Close()
+	if err != nil {
+		m.logger.Error("failed receiving message initiated by BROADCAST", zap.Error(err))
+		return false, err
+	}
 	return true, nil
 }
-
