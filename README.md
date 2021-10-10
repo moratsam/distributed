@@ -3,45 +3,45 @@
 Implementation of some algos, math concepts
 
 
-## HOWTO
+### HOWTO
 
 Execute the bootstrap bash script. It will use the distry-bootstrap.privkey to generate its identity. Then you can use the bash commands in the **bash** dir to spin up additional nodes and execute some services. You may have to change the IP in the bash scripts to match the IP of your bootstrap node.
 
 #### repo structure overview
 
-### api
+##### api
 	
 Implements the connection between grpc and the code.
 
-### bash
+##### bash
 
 Utility commands to start a node etc.
 
-### cmd
+##### cmd
 
 The entry point of the program (the main function).
 
-### k8s
+##### k8s
 
 Some yamls for deployment to kubernetes. Not working yet because of double-NAT incompatibility with libp2p peer-discovery.
 
-### messages
+##### messages
 
 Defines the structs used as messages in various protocols, as well as the logic for (un)marshalling (from)to protobuf structs.
 
-### node
+##### node
 
 Base logic of a node. Provides things like bootstrapping, identity creation and connection establishment.
 
-### omni
+##### omni
 
 Implements the base medium through which nodes exchange messages (libp2p's pubsub).
 
-### proto
+##### proto
 
 The protobuf definitions of services and messages.
 
-### proto\_gen
+##### proto\_gen
 
 The auto-generated proto code.
 
@@ -49,7 +49,7 @@ The auto-generated proto code.
 
 Code for Bracha's reliable broadcast.
 
-### rbc0
+## rbc0
 
 bracha's reliable broadcast
 DOI: 10.1016/0890-5401(87)90054-x
@@ -105,7 +105,9 @@ PROOF: For *q* to accept *v* it must gave received >= (2t+1) *(ready, v)* messag
 
 PROOF: Every correct process *q* receives an *(init, v)* message and sends a *(echo, v)* message. Thus every correct process *q* will receive >= n-t *(echo, v)* messages and will send a *(ready, v)* message. Every correct process will receive >= n-t *(ready, v)* messages and will accept *v*. 
 
-##### erasure codes
+## erasure codes
+
+### Galois field arithmetic
 
 GF(2^k) addition or subtraction is xor.
 To multiply *a* with *b*, imagine the binary written form as a polynomial of some *x* over {0,1}. Wherever there is a '1' in *a* it means add to the final result that power of *x* multiplied by *b*. Which of course translates to just right shift b by that power. This is done for each '1' in *a*. And how are these partial results then added together? Still thinking of the polynomial representation, it becomes obvious that the simply need to be summed up which is just XOR. Thus, multiplication can be easily implemented with a series of bit shifts and XORs.
@@ -113,10 +115,10 @@ To multiply *a* with *b*, imagine the binary written form as a polynomial of som
 The outcome of this operation must by divided by the prime polynomial to ensure that the end result remains in GF(2^k). Now, thinking again in terms of polynomials, division is just subtraction of the divisor at the appropriate powers. And subtraction is also just XOR. The process stops once the the remainder is under 2^k, because for every *e* in GF(2^k): e divided by the generator is e.
 
 example: a=33, b=191, generator=0x11d
-
+```
 		00100001 #a
 	 * 10111111 #b
-	 ~~~~~~~~~~~~~~~~~~
+  =================
 	 _____10111111 #this is the rightmost '1' in a; the free coefficient in the polynomial so just *b* multiplied by 1
   ^ 10111111_____ #this is the second '1'. Here x is raised to the power of 5 so just shift b 5 times. 
     1011101011111 #normal multiplication is finished, result exceeds 2^8 -1
@@ -125,11 +127,15 @@ example: a=33, b=191, generator=0x11d
 	
  	 1011101011111 #it needs to be divided by the generator to arrive back in GF(2^8)
   / 100011101____ #this is 0x11d
-  ~~~~~~~~~~~~~~~~~~~~~
+  =================
   	 0011010001111 #still > 2^8 -1, so repeat
   ^   100011101__
 	 0001011111011 #repeat
   ^    100011101_
     0000011000001 # = 193 < 2^8 -1, end
+```
 
+A generator *g* of a field is an element of the field such that every other element of the field can be expressed as a series of iterative multiplications of *g*. In this way, *g* is said to generate the field.
+To optimise multiplication, one can keep in memory the log and exp tables of a generator. Any multiplication in the field can then be performed by two lookups into the log table and 1 lookup into the exp table.
+	a*b = g^(logg(a*b)) = g^(logg(a) + logg(b))
 	
