@@ -4,28 +4,16 @@ import (
 
 )
 
-var verbose = true
 var prime = 0x11d
 var exp_table = make([]byte, 512)
 var log_table = make([]byte, 256)
 
-func printAsBinary(name string, b byte) {
-	fmt.Printf("%v: ", name)
-	for i:=0; i<8; i++ {
-		bit := b >> (7-i) & 1
-		fmt.Printf("%c", '0'+bit)
-	}
-	fmt.Println()
+func add(a, b byte) byte {
+	return a^b
 }
 
-func add(a, b byte) byte {
-	result := a^b;
-	if verbose {
-		printAsBinary("a", a)
-		printAsBinary("b", b)
-		printAsBinary("a+b", result)
-	}
-	return result
+func sub(a, b byte) byte {
+	return a^b
 }
 
 // calculate bit length
@@ -37,7 +25,7 @@ func length(a int) int {
 	return result
 }
 
-func mult(a, b byte) byte {
+func mult_costly(a, b byte) byte {
 	result := 0
 	for i:=0; a>>i > 0; i++ { //iterate over the bits of a
 		if a & (1<<i) > 0 { // if current bit is 1
@@ -64,23 +52,63 @@ func init_tables() {
 	for i:=0; i<255; i++ {
 		exp_table[i] = x
 		log_table[x] = byte(i)
-		x = mult(x, 2)
+		x = mult_costly(x, 2)
 	}
 	for i:=255; i<512; i++ {
 		exp_table[i] = exp_table[i-255]
 	}
 }
 
-func table_mult(a, b byte) byte {
+func mult(a, b byte) byte {
 	if a==0 || b==0 {
 		return 0
 	}
 	return exp_table[int(log_table[a]) + int(log_table[b])]
 }
 
+func div(a, b byte) byte {
+	if a == 0{
+		return 0
+	} else if b == 0{
+		panic("division by zero")
+	} else{
+		return exp_table[int(log_table[a]) + 255 - int(log_table[b])]
+	}
+}
+
+//------------------------------------
+
+//create cauchy matrix of dimensions (n+k)xn
+//every n rows suffice to reconstruct the data
+func create_cauchy(k, n byte) [][]byte {
+	mat := make([][]byte, n+k)
+	for i := range mat {
+		mat[i] = make([]byte, n)
+	}
+
+	arr_nk := make([]byte, n+k)
+	for i := range arr_nk{
+		arr_nk[i] = byte(i)
+	}
+
+	arr_n := make([]byte, n)
+	for i := range arr_n{
+		arr_n[i] = byte(i)+n+k
+	}
+
+	var i, j byte
+	for i=0; i<n+k; i++ {
+		for j=n+k; j<2*n+k; j++ {
+			mat[i][j-n-k] = div(1, add(i, j))
+		}
+	}
+	return mat
+}
 
 func main() {
 	init_tables()
-	fmt.Println(table_mult(byte(33), byte(191)))
-	fmt.Println(mult(byte(33), byte(191)))
+	mat := create_cauchy(5, 3)
+	for i := range mat {
+		fmt.Println(mat[i])
+	}
 }
