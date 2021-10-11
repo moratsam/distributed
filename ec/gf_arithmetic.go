@@ -156,6 +156,64 @@ func (m *Manager) get_LU() {
 	}
 }
 
+func (m *Manager) invert_LU() {
+	dim := m.n
+	inv := m.inv
+
+	side := make([][]byte, m.n) //create side identity matrix
+	for i := range side {
+		side[i] = make([]byte, m.n)
+		side[i][i] = 1
+	}
+
+	//invert U by adding an identity to its side. When U becomes identity, side is inverted U.
+	//no operations on U actually need to be performed, just their effects on the side
+	//matrix are being recorded.
+	var i, j, k byte
+	for i=dim-1; i>=0; i-- { //for every row
+		for j=dim-1; j>i; j-- { //for every column
+			for k=dim-1; k>=j; k-- { //subtract row to get a 0 in U, reflect this change in side
+				side[i][k] = sub(side[i][k], mul(inv[i][j], side[j][k]))
+			}
+		}
+		if inv[i][i] == 0{
+			continue
+		} else {
+			//divide inv[i][i] by itself to get a 1, reflect this change in whole line of side
+			for j=dim-1; j>=0; j-- {
+				side[i][j] = div(side[i][j], inv[i][i])
+			}
+		}
+	}
+
+	//get inverse of L
+	for i=0; i<dim; i++ {
+		for j=0; j<i; j++ {
+			for k=0; k<=j; k++ {
+				//since an in-place algo was used for LU decomposition,
+				//diagonal values of LU were overwritten by U,
+				//whereas L expects them to be equal to 1
+				//in this case, no mul should be performed (to simulate multiplying by 1)
+				if j == k { 
+					side[i][k] = sub(side[i][k], inv[i][j])
+				} else {
+					side[i][k] = sub(side[i][k], mul(inv[i][j], side[j][k]))
+				}
+			}
+		}
+	}
+
+
+	//inverse matrix is now the side matrix! because m.inv kinda became identity matrix
+	//kinda, because no changes to m.inv were actually recorded
+	m.inv = side
+}
+
+func (m *Manager) solve_from_inverse() [] byte {
+	return nil
+}
+
+
 //enc is [[ix1, enc1], [ix2, enc2]..], where ix gives row of cauchy matrix
 func (m *Manager) Decode(enc [][]byte) ([]byte, error) {
 	ixs := make([]byte, len(enc))
@@ -176,8 +234,8 @@ func (m *Manager) Decode(enc [][]byte) ([]byte, error) {
 
 	m.inv = inv
 	m.get_LU()
-	//m.invert_LU()
-	//data := m.solve_from_inverse()
+	m.invert_LU()
+	data := m.solve_from_inverse()
 
 	return nil, nil
 }
