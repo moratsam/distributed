@@ -94,7 +94,7 @@ func (m *Manager) create_cauchy() {
 type Manager struct {
 	k, n byte
 	mat [][]byte
-	inv_mat [][]byte
+	inv [][]byte
 	encoded []byte
 }
 
@@ -136,6 +136,51 @@ func (m *Manager) encode(data []byte) ([]byte, error) {
 	return encoded, nil
 }
 
+func (m *Manager) get_LU() {
+	dim := m.n
+
+	inv := m.inv
+	var i, row_ix, col_ix byte
+	for i=0; i<dim; i++{
+		if inv[i][i] == 0{
+			continue
+		}
+		for row_ix=i+1; row_ix<dim; row_ix++{
+			//derive factor to destroy first elemnt
+			inv[row_ix][i] = div(inv[row_ix][i], inv[i][i])
+			//subtract (row i's element * factor) from every other element in row
+			for col_ix=i+1; col_ix<dim; col_ix++{
+				inv[row_ix][col_ix] = sub(inv[row_ix][col_ix], mul(inv[i][col_ix],inv[row_ix][i]))
+			}
+		}
+	}
+}
+
+//enc is [[ix1, enc1], [ix2, enc2]..], where ix gives row of cauchy matrix
+func (m *Manager) Decode(enc [][]byte) ([]byte, error) {
+	ixs := make([]byte, len(enc))
+	for i := range ixs { //copy indexes
+		ixs[i] = enc[i][0]
+	}
+
+	inv := make([][]byte, m.n) //create inverse matrix
+	for i := range inv {
+		inv[i] = make([]byte, m.n)
+	}
+
+	for i := range inv { //populate it with rows from cauchy matrix
+		for j := range inv {
+			inv[i][j] = m.mat[ixs[i]][j]
+		}
+	}
+
+	m.inv = inv
+	m.get_LU()
+	//m.invert_LU()
+	//data := m.solve_from_inverse()
+
+	return nil, nil
+}
 
 func main() {
 	m := NewManager(5, 3)
