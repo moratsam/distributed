@@ -157,7 +157,7 @@ func (m *Manager) get_LU() {
 }
 
 func (m *Manager) invert_LU() {
-	dim := m.n
+	dim := int(m.n)
 	inv := m.inv
 
 	side := make([][]byte, m.n) //create side identity matrix
@@ -169,7 +169,7 @@ func (m *Manager) invert_LU() {
 	//invert U by adding an identity to its side. When U becomes identity, side is inverted U.
 	//no operations on U actually need to be performed, just their effects on the side
 	//matrix are being recorded.
-	var i, j, k byte
+	var i, j, k int
 	for i=dim-1; i>=0; i-- { //for every row
 		for j=dim-1; j>i; j-- { //for every column
 			for k=dim-1; k>=j; k-- { //subtract row to get a 0 in U, reflect this change in side
@@ -180,7 +180,7 @@ func (m *Manager) invert_LU() {
 			continue
 		} else {
 			//divide inv[i][i] by itself to get a 1, reflect this change in whole line of side
-			for j=dim-1; j>=0; j-- {
+			for j:=dim-1; j>=0; j-- {
 				side[i][j] = div(side[i][j], inv[i][i])
 			}
 		}
@@ -209,8 +209,32 @@ func (m *Manager) invert_LU() {
 	m.inv = side
 }
 
-func (m *Manager) solve_from_inverse() [] byte {
-	return nil
+
+//(U^-1)(L^-1)[enc] = [data]
+func (m *Manager) solve_from_inverse(enc []byte) []byte {
+	dim := int(m.n)
+	var i, j int
+
+	//calculate W := (L^-1)[enc]
+	w := make([]byte, dim)
+	for i=0; i<dim; i++ {
+		for j=0; j<=i; j++ {
+			if i == j { //diagonal values were overwritten, but pretend they're still 1
+				w[i] = add(w[i], enc[j])
+			} else {
+				w[i] = add(w[i], mul(m.inv[i][j], enc[j]))
+			}
+		}
+	}
+
+	//calculate [data] = (U^-1)W
+	data := make([]byte, dim)
+	for i=dim-1; i>=0; i-- {
+		for j=dim-1; j>i; j-- {
+			data[i] = add(data[i], mul(m.inv[i][j], w[j]))
+		}
+	}
+	return data
 }
 
 
@@ -234,8 +258,10 @@ func (m *Manager) Decode(enc [][]byte) ([]byte, error) {
 
 	m.inv = inv
 	m.get_LU()
+	fmt.Println("tuki")
 	m.invert_LU()
-	data := m.solve_from_inverse()
+	data := m.solve_from_inverse([]byte{36, 187, 10})
+	fmt.Println(data)
 
 	return nil, nil
 }
@@ -245,4 +271,7 @@ func main() {
 	data := []byte{17, 89, 3}
 	enc, _ := m.encode(data)
 	fmt.Println(enc)
+
+	zares := [][]byte{{3,36},{5,187},{6,10}}
+	m.Decode(zares)
 }
