@@ -1,7 +1,7 @@
 package main 
 import (
 	"fmt"
-
+	"github.com/pkg/errors"
 )
 
 var prime = 0x11d
@@ -25,7 +25,7 @@ func length(a int) int {
 	return result
 }
 
-func mult_costly(a, b byte) byte {
+func mul_costly(a, b byte) byte {
 	result := 0
 	for i:=0; a>>i > 0; i++ { //iterate over the bits of a
 		if a & (1<<i) > 0 { // if current bit is 1
@@ -52,14 +52,14 @@ func init_tables() {
 	for i:=0; i<255; i++ {
 		exp_table[i] = x
 		log_table[x] = byte(i)
-		x = mult_costly(x, 2)
+		x = mul_costly(x, 2)
 	}
 	for i:=255; i<512; i++ {
 		exp_table[i] = exp_table[i-255]
 	}
 }
 
-func mult(a, b byte) byte {
+func mul(a, b byte) byte {
 	if a==0 || b==0 {
 		return 0
 	}
@@ -99,6 +99,9 @@ type Manager struct {
 }
 
 func NewManager(k, n byte) *Manager {
+	if int(k) + int(n) > 255 {
+		panic("the sum of k and n must not exceed 255")
+	}
 	init_tables()
 	mat := make([][]byte, n+k)
 	for i := range mat {
@@ -115,11 +118,28 @@ func NewManager(k, n byte) *Manager {
 	return m
 }
 
+// e:: encoded, (n+k)x1,  d: data, (n)x1
+//e = (m.mat)*d
+func (m *Manager) encode(data []byte) ([]byte, error) {
+	k, n := m.k, m.n
+	if len(data) != int(n) {
+		return nil, errors.New("incorrect data length")
+	}
+	
+	encoded := make([]byte, n+k)
+	var i, j byte
+	for i=0; i<n+k; i++ {
+		for j=0; j<n; j++ {
+			encoded[i] = add(encoded[i], mul(m.mat[i][j], data[j]))
+		}
+	}
+	return encoded, nil
+}
+
 
 func main() {
-
 	m := NewManager(5, 3)
-	for i := range m.mat {
-		fmt.Println(m.mat[i])
-	}
+	data := []byte{17, 89, 3}
+	enc, _ := m.encode(data)
+	fmt.Println(enc)
 }
