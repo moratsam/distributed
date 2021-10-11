@@ -80,35 +80,46 @@ func div(a, b byte) byte {
 
 //create cauchy matrix of dimensions (n+k)xn
 //every n rows suffice to reconstruct the data
-func create_cauchy(k, n byte) [][]byte {
+func (m *Manager) create_cauchy() {
+	k, n := m.k, m.n
+
+	var i, j byte
+	for i=0; i<n+k; i++ {
+		for j=n+k; j<2*n+k; j++ {
+			m.mat[i][j-n-k] = div(1, add(i, j))
+		}
+	}
+}
+
+type Manager struct {
+	k, n byte
+	mat [][]byte
+	inv_mat [][]byte
+	encoded []byte
+}
+
+func NewManager(k, n byte) *Manager {
+	init_tables()
 	mat := make([][]byte, n+k)
 	for i := range mat {
 		mat[i] = make([]byte, n)
 	}
 
-	arr_nk := make([]byte, n+k)
-	for i := range arr_nk{
-		arr_nk[i] = byte(i)
+	m := &Manager{
+		k:		k,
+		n:		n,
+		mat: mat,
 	}
+	m.create_cauchy()
 
-	arr_n := make([]byte, n)
-	for i := range arr_n{
-		arr_n[i] = byte(i)+n+k
-	}
-
-	var i, j byte
-	for i=0; i<n+k; i++ {
-		for j=n+k; j<2*n+k; j++ {
-			mat[i][j-n-k] = div(1, add(i, j))
-		}
-	}
-	return mat
+	return m
 }
 
+
 func main() {
-	init_tables()
-	mat := create_cauchy(5, 3)
-	for i := range mat {
-		fmt.Println(mat[i])
+
+	m := NewManager(5, 3)
+	for i := range m.mat {
+		fmt.Println(m.mat[i])
 	}
 }
