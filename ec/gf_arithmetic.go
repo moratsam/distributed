@@ -139,26 +139,27 @@ func (m *Manager) encode(data []byte) ([]byte, error) {
 func (m *Manager) get_LU() {
 	dim := m.n
 
-	inv := m.inv
+	mat := m.inv
 	var i, row_ix, col_ix byte
 	for i=0; i<dim; i++{
-		if inv[i][i] == 0{
+		if mat[i][i] == 0{
 			continue
 		}
 		for row_ix=i+1; row_ix<dim; row_ix++{
 			//derive factor to destroy first elemnt
-			inv[row_ix][i] = div(inv[row_ix][i], inv[i][i])
+			mat[row_ix][i] = div(mat[row_ix][i], mat[i][i])
 			//subtract (row i's element * factor) from every other element in row
 			for col_ix=i+1; col_ix<dim; col_ix++{
-				inv[row_ix][col_ix] = sub(inv[row_ix][col_ix], mul(inv[i][col_ix],inv[row_ix][i]))
+				mat[row_ix][col_ix] = sub(mat[row_ix][col_ix], mul(mat[i][col_ix],mat[row_ix][i]))
 			}
 		}
 	}
+
 }
 
 func (m *Manager) invert_LU() {
 	dim := int(m.n)
-	inv := m.inv
+	mat := m.inv
 
 	side := make([][]byte, m.n) //create side identity matrix
 	for i := range side {
@@ -173,15 +174,15 @@ func (m *Manager) invert_LU() {
 	for i=dim-1; i>=0; i-- { //for every row
 		for j=dim-1; j>i; j-- { //for every column
 			for k=dim-1; k>=j; k-- { //subtract row to get a 0 in U, reflect this change in side
-				side[i][k] = sub(side[i][k], mul(inv[i][j], side[j][k]))
+				side[i][k] = sub(side[i][k], mul(mat[i][j], side[j][k]))
 			}
 		}
-		if inv[i][i] == 0{
+		if mat[i][i] == 0{
 			continue
 		} else {
-			//divide inv[i][i] by itself to get a 1, reflect this change in whole line of side
-			for j:=dim-1; j>=0; j-- {
-				side[i][j] = div(side[i][j], inv[i][i])
+			//divide mat[i][i] by itself to get a 1, reflect this change in whole line of side
+			for j=dim-1; j>=0; j-- {
+				side[i][j] = div(side[i][j], mat[i][i])
 			}
 		}
 	}
@@ -195,9 +196,9 @@ func (m *Manager) invert_LU() {
 				//whereas L expects them to be equal to 1
 				//in this case, no mul should be performed (to simulate multiplying by 1)
 				if j == k { 
-					side[i][k] = sub(side[i][k], inv[i][j])
+					side[i][k] = sub(side[i][k], mat[i][j])
 				} else {
-					side[i][k] = sub(side[i][k], mul(inv[i][j], side[j][k]))
+					side[i][k] = sub(side[i][k], mul(mat[i][j], side[j][k]))
 				}
 			}
 		}
@@ -207,6 +208,7 @@ func (m *Manager) invert_LU() {
 	//inverse matrix is now the side matrix! because m.inv kinda became identity matrix
 	//kinda, because no changes to m.inv were actually recorded
 	m.inv = side
+
 }
 
 
@@ -230,13 +232,12 @@ func (m *Manager) solve_from_inverse(enc []byte) []byte {
 	//calculate [data] = (U^-1)W
 	data := make([]byte, dim)
 	for i=dim-1; i>=0; i-- {
-		for j=dim-1; j>i; j-- {
+		for j=dim-1; j>=i; j-- {
 			data[i] = add(data[i], mul(m.inv[i][j], w[j]))
 		}
 	}
 	return data
 }
-
 
 //enc is [[ix1, enc1], [ix2, enc2]..], where ix gives row of cauchy matrix
 func (m *Manager) Decode(enc [][]byte) ([]byte, error) {
@@ -255,12 +256,14 @@ func (m *Manager) Decode(enc [][]byte) ([]byte, error) {
 			inv[i][j] = m.mat[ixs[i]][j]
 		}
 	}
-
 	m.inv = inv
+
+
+
+
 	m.get_LU()
-	fmt.Println("tuki")
 	m.invert_LU()
-	data := m.solve_from_inverse([]byte{36, 187, 10})
+	data := m.solve_from_inverse([]byte{enc[0][1], enc[1][1], enc[2][1]})
 	fmt.Println(data)
 
 	return nil, nil
@@ -268,10 +271,15 @@ func (m *Manager) Decode(enc [][]byte) ([]byte, error) {
 
 func main() {
 	m := NewManager(5, 3)
-	data := []byte{17, 89, 3}
+	data := []byte{16, 12, 183}
 	enc, _ := m.encode(data)
+	/*
+	for r := range(m.mat){
+		fmt.Println(m.mat[r])		
+	}
+	*/
 	fmt.Println(enc)
 
-	zares := [][]byte{{3,36},{5,187},{6,10}}
+	zares := [][]byte{{2, enc[2]},{5, enc[5]},{7,enc[7]}}
 	m.Decode(zares)
 }
