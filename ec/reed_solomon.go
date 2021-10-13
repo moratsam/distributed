@@ -1,72 +1,47 @@
 package main
 import (
 	"fmt"
-	"github.com/pkg/errors"
 )
 
 //------------------------------------
 
 //create cauchy matrix of dimensions (n+k)xn
 //every n rows suffice to reconstruct the data
-func (m *Manager) create_cauchy() {
-	k, n := m.k, m.n
-
-	var i, j byte
-	for i=0; i<n+k; i++ {
-		for j=n+k; j<2*n+k; j++ {
-			m.mat[i][j-n-k] = div(1, add(i, j))
-		}
-	}
-}
-
-type Manager struct {
-	k, n byte
-	mat [][]byte
-	inv [][]byte
-	encoded []byte
-}
-
-func NewManager(k, n byte) *Manager {
-	if int(k) + int(n) > 255 {
-		panic("the sum of k and n must not exceed 255")
-	}
+func create_cauchy(k, n byte) [][]byte{
 	mat := make([][]byte, n+k)
 	for i := range mat {
 		mat[i] = make([]byte, n)
 	}
 
-	m := &Manager{
-		k:		k,
-		n:		n,
-		mat: mat,
+	var i, j byte
+	for i=0; i<n+k; i++ {
+		for j=n+k; j<2*n+k; j++ {
+			mat[i][j-n-k] = div(1, add(i, j))
+		}
 	}
-	m.create_cauchy()
-
-	return m
+	return mat
 }
 
-// e:: encoded, (n+k)x1,  d: data, (n)x1
+// enc encoded, (n+k)x1,  d: data, (n)x1
 //e = (m.mat)*d
-func (m *Manager) encode(data []byte) ([]byte, error) {
-	k, n := m.k, m.n
-	if len(data) != int(n) {
-		return nil, errors.New("incorrect data length")
-	}
+func encode(data []byte, mat [][]byte) []byte {
+	k, n := byte(len(mat)-len(mat[0])), byte(len( mat[0] ))
+	fmt.Println()
 	
-	encoded := make([]byte, n+k)
+	enc := make([]byte, n+k)
 	var i, j byte
 	for i=0; i<n+k; i++ {
 		for j=0; j<n; j++ {
-			encoded[i] = add(encoded[i], mul(m.mat[i][j], data[j]))
+			enc[i] = add(enc[i], mul(mat[i][j], data[j]))
 		}
 	}
-	return encoded, nil
+	return enc
 }
 
-func (m *Manager) get_LU() {
-	dim := m.n
 
-	mat := m.inv
+func get_LU(mat [][]byte) {
+	dim := byte(len( mat[0] ))
+
 	var i, row_ix, col_ix byte
 	for i=0; i<dim; i++{
 		if mat[i][i] == 0{
@@ -81,16 +56,14 @@ func (m *Manager) get_LU() {
 			}
 		}
 	}
-
 }
 
-func (m *Manager) invert_LU() {
-	dim := int(m.n)
-	mat := m.inv
+func invert_LU(mat [][]byte) [][]byte {
+	dim := len( mat[0] )
 
-	side := make([][]byte, m.n) //create side identity matrix
+	side := make([][]byte, dim) //create side identity matrix
 	for i := range side {
-		side[i] = make([]byte, m.n)
+		side[i] = make([]byte, dim)
 		side[i][i] = 1
 	}
 
@@ -131,11 +104,9 @@ func (m *Manager) invert_LU() {
 		}
 	}
 
-
 	//inverse matrix is now the side matrix! because m.inv kinda became identity matrix
 	//kinda, because no changes to m.inv were actually recorded
-	m.inv = side
-
+	return side
 }
 
 
@@ -144,8 +115,10 @@ func (m *Manager) invert_LU() {
 //mat = LU
 //mat^-1 = (U^-1)(L^-1)  
 //(U^-1)(L^-1)[enc] = [data]
-func (m *Manager) solve_from_inverse(enc []byte) []byte {
-	dim := int(m.n)
+func solve_from_inverse(inv, tmp_enc [][]byte) []byte {
+	enc := []byte{tmp_enc[0][1], tmp_enc[1][1], tmp_enc[2][1]}
+
+	dim := len( inv[0] )
 	var i, j int
 
 	//calculate W := (L^-1)[enc]
@@ -155,7 +128,7 @@ func (m *Manager) solve_from_inverse(enc []byte) []byte {
 			if i == j { //diagonal values were overwritten, but pretend they're still 1
 				w[i] = add(w[i], enc[j])
 			} else {
-				w[i] = add(w[i], mul(m.inv[i][j], enc[j]))
+				w[i] = add(w[i], mul(inv[i][j], enc[j]))
 			}
 		}
 	}
@@ -164,53 +137,8 @@ func (m *Manager) solve_from_inverse(enc []byte) []byte {
 	data := make([]byte, dim)
 	for i=dim-1; i>=0; i-- {
 		for j=dim-1; j>=i; j-- {
-			data[i] = add(data[i], mul(m.inv[i][j], w[j]))
+			data[i] = add(data[i], mul(inv[i][j], w[j]))
 		}
 	}
 	return data
-}
-
-//enc is [[ix1, enc1], [ix2, enc2]..], where ix gives row of cauchy matrix
-func (m *Manager) Decode(enc [][]byte) ([]byte, error) {
-	ixs := make([]byte, len(enc))
-	for i := range ixs { //copy indexes
-		ixs[i] = enc[i][0]
-	}
-
-	inv := make([][]byte, m.n) //create inverse matrix
-	for i := range inv {
-		inv[i] = make([]byte, m.n)
-	}
-
-	for i := range inv { //populate it with rows from cauchy matrix
-		for j := range inv {
-			inv[i][j] = m.mat[ixs[i]][j]
-		}
-	}
-	m.inv = inv
-
-
-
-
-	m.get_LU()
-	m.invert_LU()
-	data := m.solve_from_inverse([]byte{enc[0][1], enc[1][1], enc[2][1]})
-	fmt.Println(data)
-
-	return nil, nil
-}
-
-func main() {
-	m := NewManager(5, 3)
-	data := []byte{18, 16, 12}
-	enc, _ := m.encode(data)
-	/*
-	for r := range(m.mat){
-		fmt.Println(m.mat[r])		
-	}
-	*/
-	fmt.Println(enc)
-
-	zares := [][]byte{{2, enc[2]},{5, enc[5]},{7,enc[7]}}
-	m.Decode(zares)
 }
