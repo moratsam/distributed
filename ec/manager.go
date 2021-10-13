@@ -88,7 +88,7 @@ func (m *Manager) Decode(enc [][]byte) ([]byte, error) {
 
 func main() {
 	m := NewManager(5, 3)
-	data := [][]byte{{18, 23}, {16, 16}, {12, 5}}
+	data := [][]byte{{'r', 23}, {16, 16}, {12, 5}}
 	enc, _ := m.Encode(data)
 	/*
 	for r := range(m.mat){
