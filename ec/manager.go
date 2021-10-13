@@ -42,9 +42,7 @@ func NewManager(k, n byte) *Manager {
 	return m
 }
 
-// e:: encoded, (n+k)x1,  d: data, (n)x1
-//e = (m.mat)*d
-func (m *Manager) Encode(data []byte) ([]byte, error) {
+func (m *Manager) Encode(data [][]byte) ([][]byte, error) {
 
 	if len(data) != int(m.n) {
 		return nil, errors.New("incorrect data length")
@@ -92,6 +90,7 @@ func main() {
 	*/
 	fmt.Println("gott:", enc)
 	fmt.Println("need: [149 238 12 219 68 106 151 182]")
+	return
 	
 
 	zares := [][]byte{{2, enc[2]},{5, enc[5]},{7,enc[7]}}

@@ -22,17 +22,24 @@ func create_cauchy(k, n byte) [][]byte{
 	return mat
 }
 
-// enc encoded, (n+k)x1,  d: data, (n)x1
-//e = (m.mat)*d
-func encode(data []byte, mat [][]byte) []byte {
-	k, n := byte(len(mat)-len(mat[0])), byte(len( mat[0] ))
+//[data] has dimensions nxY for arbitrary Y
+//[enc] has dimensions (n+k)xY
+//[enc] = (mat)[data]
+func encode(data [][]byte, mat [][]byte) [][]byte {
+	k, n, y := len(mat)-len(mat[0]), len(mat[0]), len(data[0])
 	fmt.Println()
 	
-	enc := make([]byte, n+k)
-	var i, j byte
-	for i=0; i<n+k; i++ {
-		for j=0; j<n; j++ {
-			enc[i] = add(enc[i], mul(mat[i][j], data[j]))
+	enc := make([][]byte, n+k)
+	for i := range n{
+		enc[i] = make([]byte, len(data[0]))
+	}
+
+	var i, j, k int
+	for i=0; i<n+k; i++ { //for every row in mat
+		for k=0; k<y; k++{ //for every column in data
+			for j=0; j<n; j++ { //make sum of (row*column)
+				enc[i][k] = add(enc[i][k], mul(mat[i][j], data[j][k]))
+			}
 		}
 	}
 	return enc
