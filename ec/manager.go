@@ -78,33 +78,38 @@ func (m *Manager) Decode(enc [][]byte) ([]byte, error) {
 
 	get_LU(cauchy)
 	m.inv = invert_LU(cauchy)
-
 	data := solve_from_inverse(m.inv, enc[0:m.n])
-	fmt.Println(data)
 
+	control := "kurba sem DOBR  BOBR"
+	ix := 0
+	for _,data_part := range data{
+		for _, c := range(data_part){
+			if c != control[ix] {
+				return nil, errors.New("neki ne dela")
+			}
+			ix++
+		}
+	}
 	return nil, nil
 }
 
 
 func main() {
-	m := NewManager(5, 3)
-	data := [][]byte{{'r', 23}, {16, 16}, {12, 5}}
+	m := NewManager(5, 4)
+	data := [][]byte{{'k', 'u', 'r', 'b', 'a'}, {' ', 's', 'e', 'm', ' '}, {'D', 'O', 'B', 'R', ' '}, {' ', 'B', 'O', 'B', 'R'}}
 	enc, _ := m.Encode(data)
-	/*
-	for r := range(m.mat){
-		fmt.Println(m.mat[r])		
-	}
-	*/
-	fmt.Println("gott:", enc)
-	fmt.Println("need: [149 238 12 219 68 106 151 182]")
-	
+
 	//make n-subset of [enc], which will be put to Decode to retrieve original [data]
 	for i:=0; i<len(enc); i++{
 		for j:=1+i; j<len(enc); j++ {
 			for k:=1+j; k<len(enc); k++{
-				subset := [][]byte{enc[i], enc[j], enc[k]}
-				m.Decode(subset)
-				return
+				for l:=1+k; l<len(enc); l++{
+					subset := [][]byte{enc[i], enc[j], enc[k], enc[l]}
+					_, err := m.Decode(subset)
+					if err != nil{
+						fmt.Println(err)
+					}
+				}
 			}
 		}
 	}
