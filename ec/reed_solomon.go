@@ -23,22 +23,24 @@ func create_cauchy(k, n byte) [][]byte{
 }
 
 //[data] has dimensions nxY for arbitrary Y
-//[enc] has dimensions (n+k)xY
+//[enc] has dimensions (n+k)x(1+Y)
+//the first element of each row is index of mat row that was used to encode it
 //[enc] = (mat)[data]
 func encode(data [][]byte, mat [][]byte) [][]byte {
-	k, n, y := len(mat)-len(mat[0]), len(mat[0]), len(data[0])
+	k, n, data_columns := len(mat)-len(mat[0]), len(mat[0]), len(data[0])
 	fmt.Println()
 	
 	enc := make([][]byte, n+k)
-	for i := range n{
-		enc[i] = make([]byte, len(data[0]))
+	for i := range enc{
+		enc[i] = make([]byte, 1+len(data[0]))
 	}
 
-	var i, j, k int
-	for i=0; i<n+k; i++ { //for every row in mat
-		for k=0; k<y; k++{ //for every column in data
+	var r, j, y int
+	for r=0; r<n+k; r++ { //for every row in mat
+		enc[r][0] = byte(r) //record row index, which is needed in decoding
+		for y=0; y<data_columns; y++{ //for every column in data
 			for j=0; j<n; j++ { //make sum of (row*column)
-				enc[i][k] = add(enc[i][k], mul(mat[i][j], data[j][k]))
+				enc[r][1+y] = add(enc[r][1+y], mul(mat[r][j], data[j][y]))
 			}
 		}
 	}
@@ -122,29 +124,37 @@ func invert_LU(mat [][]byte) [][]byte {
 //mat = LU
 //mat^-1 = (U^-1)(L^-1)  
 //(U^-1)(L^-1)[enc] = [data]
-func solve_from_inverse(inv, tmp_enc [][]byte) []byte {
-	enc := []byte{tmp_enc[0][1], tmp_enc[1][1], tmp_enc[2][1]}
+func solve_from_inverse(inv, enc [][]byte) [][]byte {
+	dim, data_columns := len(inv[0]), len(enc[0]) -1 //-1 because first el is index of row
+	var r, y, j int
 
-	dim := len( inv[0] )
-	var i, j int
-
+	w := make([][]byte, dim)
+	for i := range w{
+		w[i] = make([]byte, data_columns)
+	}
 	//calculate W := (L^-1)[enc]
-	w := make([]byte, dim)
-	for i=0; i<dim; i++ {
-		for j=0; j<=i; j++ {
-			if i == j { //diagonal values were overwritten, but pretend they're still 1
-				w[i] = add(w[i], enc[j])
-			} else {
-				w[i] = add(w[i], mul(inv[i][j], enc[j]))
+	for r=0; r<dim; r++ { //for every row in inv
+		for y=0; y<data_columns; y++{ //for every column in data
+			for j=0; j<=r; j++ { //make sum of (row*column)
+				if r == j { //diagonal values were overwritten, but pretend they're still 1
+					w[r][y] = add(w[r][y], enc[j][1+y])
+				} else {
+					w[r][y] = add(w[r][y], mul(inv[r][j], enc[j][1+y]))
+				}
 			}
 		}
 	}
 
+	data := make([][]byte, dim)
+	for i := range data{
+		data[i] = make([]byte, data_columns)
+	}
 	//calculate [data] = (U^-1)W
-	data := make([]byte, dim)
-	for i=dim-1; i>=0; i-- {
-		for j=dim-1; j>=i; j-- {
-			data[i] = add(data[i], mul(inv[i][j], w[j]))
+	for r=dim-1; r>=0; r-- {
+		for y=0; y<data_columns; y++{
+			for j=dim-1; j>=r; j-- {
+				data[r][y] = add(data[r][y], mul(inv[r][j], w[j][y]))
+			}
 		}
 	}
 	return data
