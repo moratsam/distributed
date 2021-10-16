@@ -1,7 +1,4 @@
 package main
-import (
-	"fmt"
-)
 
 //here basic operations on polynomials over the galois field 2^8 are implemented
 
@@ -42,7 +39,6 @@ func mul_costly(a, b byte) byte {
 
 //use generator 2 to init log and exp tables
 func init_tables() {
-	fmt.Println("tables initt'd")
 	x := byte(1)
 	for i:=0; i<255; i++ {
 		exp_table[i] = x

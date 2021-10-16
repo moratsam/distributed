@@ -1,6 +1,10 @@
 package main
 import (
 	"fmt"
+	"io"
+	"os"
+	"sync"
+
 	"github.com/pkg/errors"
 )
 
@@ -94,7 +98,129 @@ func (m *Manager) Decode(enc [][]byte) ([]byte, error) {
 }
 
 
+
+var chunk_size = 1024
+
+type chunk struct {
+	size int
+	data []byte
+}
+
+
+//	receive a chunk of bytes of data; 
+//	for each row r in cauchy matrix:
+//		make e := dot product <r, d>
+//		send e to writer of r
+func encode(c_reader chan chunk, c_writers []chan byte){
+	k, n := 5, 3
+	//after main routine receives new d, it will use the c_data_available to tell each of the
+	//row routines that a new d is available
+	c_data_available := make([]chan struct{}, len(c_writers))
+
+	//array of n bytes of data
+	data_chunk := make([]byte, chunk_size)
+	wg := new(sync.WaitGroup)
+
+	for i := range c_data_available{ //for every matrix row
+		c_data_available[i] = make(chan struct{})
+
+		go func(c_data_available chan struct{}, c_writer chan byte, data chunk, wg *sync.WaitGroup) { 
+			for {
+				_, ok := <- c_data_available //new data is available
+				if !ok{ //no more data
+					close(c_writer)
+					return
+				}
+				//enc := encode(data) //encode row with new n-chunk
+				for _,b := range data.data[:data.size] {
+					c_writer <- b
+				}
+				//c_writer <- data.data[:data.size] //send encoded byte to writer
+				wg.Done() //signify no longer need current_chunk
+			}
+		}(c_data_available[i], c_writers[i], data_chunk, wg)
+	}
+
+	for {
+		data_chunk, ok = <- c_reader //receive chunk
+		if !ok{ //channel closed
+			for ch := range c_data_available{
+				close(ch)
+			}
+		}
+		wg.Add(n+k) //set up wait for routines
+		for _, ch := range c_data_available { //tell routines they may read chunk
+			ch <- struct{}{}
+		}
+		wg.Wait() //wait for them to tell you they are finished
+	}
+}
+
+
 func main() {
+	k, n = 5, 3
+	filepath := "fajl"
+
+	c_reader := make(chan chunk)
+	go readFile(filepath, c_reader) //make routine which will read file
+
+	var c_writers [n+k]chan byte //one chan for each writer which will write encoded file
+	for i := range c_writers {
+		c_writers[i] = make(chan byte, 3)
+		outpath := filepath + "_i.enc"
+		go writeFile(outpath, c_writers[i]) //spawn n+k routines which will write encoded files
+	}
+
+	go encode(c_reader, c_writers) //read data, encode it, send it to writers
+}
+
+func writeFile(path string, c chan byte) {
+	  file, err := os.Create(path)
+	  if err != nil {
+	  		fmt.Println(err)
+	  }
+	  defer file.Close()
+
+	  for b := range c { //receive byte, write to file
+			n, err := file.Write(b)
+			if err != nil {
+				fmt.Println(err)
+			}
+	  }
+}
+
+//read bytes from file, send them to channel c
+func readFile(path string, c chan chunk) {
+	file, err := os.Open(path)
+	defer file.Close()
+	if err != nil {
+		fmt.Println("napakica v branju fajla frent")
+	}
+
+	for {
+		var chunky chunk
+		chunky.data = make([]byte, chunk_size)
+
+		chunky.size, err := file.Read(chunky.data)
+		if err != nil {
+			if err == io.EOF{
+				c <- chunky
+				close(c)
+				break
+			} else{
+				fmt.Println(err)
+			}
+		}
+		c <- chunky
+	}
+}
+
+/*
+func main() {
+
+	readFile("fajl")
+	return
+
 	m := NewManager(5, 4)
 	data := [][]byte{{'k', 'u', 'r', 'b', 'a'}, {' ', 's', 'e', 'm', ' '}, {'D', 'O', 'B', 'R', ' '}, {' ', 'B', 'O', 'B', 'R'}}
 	enc, _ := m.Encode(data)
@@ -117,3 +243,4 @@ func main() {
 	//zares := [][]byte{{2, enc[2]},{5, enc[5]},{7,enc[7]}}
 	//m.Decode(zares)
 }
+*/
