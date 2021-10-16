@@ -27,12 +27,14 @@ func (m *Manager) create_cauchy() {
 
 type Manager struct {
 	k, n byte
+	chunk_size int
 	mat [][]byte
 	inv [][]byte
 	enc []byte
 }
 
 func NewManager(k, n byte) *Manager {
+
 	if int(k) + int(2*n) > 255 {
 		panic("the sum of k and n must not exceed 255")
 	}
@@ -41,6 +43,7 @@ func NewManager(k, n byte) *Manager {
 	m := &Manager{
 		k:		k,
 		n:		n,
+		chunk_size: 1000*int(n),
 		mat: mat,
 		inv: nil,
 	}
@@ -86,22 +89,17 @@ func (m *Manager) Decode(enc [][]byte) ([]byte, error) {
 	m.inv = invert_LU(cauchy)
 	data := solve_from_inverse(m.inv, enc[0:m.n])
 
-	control := "kurba sem DOBR  BOBR"
-	ix := 0
 	for _,data_part := range data{
 		for _, c := range(data_part){
-			if c != control[ix] {
-				return nil, errors.New("neki ne dela")
-			}
-			ix++
+			fmt.Printf("%c", c)
 		}
 	}
+	fmt.Println()
 	return nil, nil
 }
 
 
 
-var chunk_size = 1024
 
 type chunk struct {
 	size int
@@ -113,7 +111,7 @@ type chunk struct {
 //	for each row r in cauchy matrix:
 //		make e := dot product <r, d>
 //		send e to writer of r
-func eencode(c_reader chan chunk, c_writers []chan byte){
+func (m *Manager) eencode(c_reader chan chunk, c_writers []chan byte){
 	k, n := 5, 3
 	//after main routine receives new d, it will use the c_data_available to tell each of the
 	//row routines that a new d is available
@@ -126,21 +124,30 @@ func eencode(c_reader chan chunk, c_writers []chan byte){
 	for i := range c_data_available{ //for every matrix row
 		c_data_available[i] = make(chan struct{})
 
-		go func(c_data_available chan struct{}, c_writer chan byte, data *chunk, wg *sync.WaitGroup) { 
+		go func(c_data_available chan struct{}, c_writer chan byte, data *chunk, wg *sync.WaitGroup, i int) { 
+			c_writer <- byte(i) //send index of cauchy matrix row
+			cauchy_row := m.mat[i]
+
 			for {
 				_, ok := <- c_data_available //new data is available
 				if !ok{ //no more data
 					close(c_writer)
 					return
 				}
-				//enc := encode(data) //encode row with new n-chunk
-				for _,b := range data.data[:data.size] {
-					c_writer <- b
+
+				var encoded_byte byte
+				for z:=0; z<data.size; z+=int(m.n){ //for every n-word of data
+					for i := range cauchy_row { //do dot product of the n-word with cauchy row
+						encoded_byte = add(encoded_byte, mul(cauchy_row[i], data.data[z+i]))
+					}
+					fmt.Println(i, encoded_byte)
+					c_writer <- encoded_byte //send it to writer
 				}
+
 				//c_writer <- data.data[:data.size] //send encoded byte to writer
 				wg.Done() //signify no longer need current_chunk
 			}
-		}(c_data_available[i], c_writers[i], &data_chunk, wg)
+		}(c_data_available[i], c_writers[i], &data_chunk, wg, i)
 	}
 
 	ok := true
@@ -152,8 +159,17 @@ func eencode(c_reader chan chunk, c_writers []chan byte){
 			}
 			return
 		}
-		fmt.Println(data_chunk.size)
 		wg.Add(n+k) //set up wait for routines
+
+		if data_chunk.size % int(m.n) != 0 { //add up some zeros
+			for z:=0; z < data_chunk.size % int(m.n); z++{
+				ix := z + data_chunk.size
+				data_chunk.data[ix] = 0 //TODO this probably isnt necessary, just adjust .size
+			}
+			data_chunk.size += (data_chunk.size % int(m.n))
+		}
+
+
 		for _,c := range c_data_available { //tell routines they may read chunk
 			c <- struct{}{}
 		}
@@ -163,24 +179,24 @@ func eencode(c_reader chan chunk, c_writers []chan byte){
 
 
 func main() {
-	k, n := 5, 3
+	m := NewManager(5, 3)
 	filepath := "fajl"
 
 	c_reader := make(chan chunk)
-	go readFile(filepath, c_reader) //make routine which will read file
+	go readFile(filepath, c_reader, m.chunk_size) //make routine which will read file
 
-	c_writers := make([]chan byte, n+k)//one chan for each writer which will write encoded file
+	c_writers := make([]chan byte, m.n+m.k)//one chan for each writer which will write encoded file
 	for i := range c_writers {
 		c_writers[i] = make(chan byte, 3)
 		outpath := filepath + "_" + strconv.Itoa(i) + ".enc"
-		go writeFile(outpath, c_writers[i]) //spawn n+k routines which will write encoded files
+		go writeFile(outpath, c_writers[i], m.chunk_size) //spawn n+k routines which will write encoded files
 	}
 
-	go eencode(c_reader, c_writers) //read data, encode it, send it to writers
+	go m.eencode(c_reader, c_writers) //read data, encode it, send it to writers
 	time.Sleep(1*time.Second)
 }
 
-func writeFile(path string, c chan byte) {
+func writeFile(path string, c chan byte, chunk_size int) {
   file, err := os.Create(path)
   if err != nil {
 		fmt.Println(err)
@@ -210,7 +226,7 @@ func writeFile(path string, c chan byte) {
 }
 
 //read bytes from file, send them to channel c
-func readFile(path string, c chan chunk) {
+func readFile(path string, c chan chunk, chunk_size int) {
 	file, err := os.Open(path)
 	defer file.Close()
 	if err != nil {
@@ -238,13 +254,12 @@ func readFile(path string, c chan chunk) {
 }
 
 /*
-func main() {
+*/
+func cain() {
 
-	readFile("fajl")
-	return
-
-	m := NewManager(5, 4)
-	data := [][]byte{{'k', 'u', 'r', 'b', 'a'}, {' ', 's', 'e', 'm', ' '}, {'D', 'O', 'B', 'R', ' '}, {' ', 'B', 'O', 'B', 'R'}}
+	m := NewManager(5, 3)
+	data := [][]byte{{111}, {111}, {10}}
+	//[[0 222] [1 70] [2 74] [3 183] [4 95] [5 194] [6 58] [7 197]]
 	enc, _ := m.Encode(data)
 
 	//make n-subset of [enc], which will be put to Decode to retrieve original [data]
@@ -265,4 +280,3 @@ func main() {
 	//zares := [][]byte{{2, enc[2]},{5, enc[5]},{7,enc[7]}}
 	//m.Decode(zares)
 }
-*/
