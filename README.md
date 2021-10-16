@@ -195,31 +195,42 @@ To optimise multiplication, one can keep in memory the log and exp tables of a g
 	a*b = g^(logg(a*b)) = g^(logg(a) + logg(b))
 	
 #### Reed-Solomon
+	Suppose we have a file of data of size N and suppose we want to create from it (n+k) shards of size roughly N/n, such that possessing any n-subset of the shards allows one to reconstruct the original data. 
 
-m: word size of the encoding
-n: number of data packets
-k: number of check packets
+	note: all operations are performed on Galois fields (in my case GF(2^8) since I'm operating on bytes)
 
-any n received out of (n+k) will suffice to recover data
-
-Each packet is subdivided into words of length m bits and check values must be computed for each word.
-The packet stream that is actually transmitted consists of FEC groups containing both data packets and check packets used in reconstructing lost data packets. Data packets are fixed size and check packets have the same length as data packets. A FEC group consists of n data and k check packets where n +k <= 2^m .
-Successful receipt of any n packets from the combination data and check packets is sufficient to permit reconstruction of the n data packets.
-
-FEC group: n*<data packet> k*<check packet> ; n+k <= 2^m
-
-vandermonde matrix: (n+k) x n
-
-assume: data packet: <word1>, specifically [4,5,6]
-m=3, n=3, k=5
-D: matrix with identity on top
-E: bottom part of D, so k x n
-
-E * [4,5,6]^T = [3,5,4,3,2]^T <--- check values
-
-Each of the 8 “packets” must also carry an identifier that allows the recipient to determine exactly which packets of a FEC group have been received. The values contained in the 8 “packets” that are sent are thus:
-
-{(0, 4), (1, 5), (2, 6), (3, 3), (4, 5), (5, 4), (6, 3), (7, 2)}.
-
+	ENCODING: 
+	i) Create a cool matrix mat of dimensions (n+k)xn.
+	ii) Divide the data into words of size n (n-words) and stack them into a matrix [data] with dimensions nx(N/n)
+	iii) Define mat * [data] = [enc] //dimensions of [enc] are obviously [n+k]x[N/n]
+	Each row in [enc] can be thought of as a shard.
+	The index of the row should be put into the shard, as it's needed for decoding.
 	
 
+	DECODING:
+	This is the magic idea:
+		mat * [data] = [enc] ==> 
+		==> mat^-1 * mat * [data] = mat^-1 * [enc] ==>
+		==> [data] = mat^-1 * [enc]
+
+	
+	Say one has n shards. 
+	ii) stack them together to create a submatrix of [enc] called [subenc]
+	i) Create mat
+	ii) Remove all rows not pertaining to one's shards // now one is left with a nxn submat
+	iii) Calculate submat^-1, the inverse of submat
+	iv) Reconstruct [data] by multiplying submat^-1 * [subenc]
+
+
+	The main difficulty with these scheme is that mat must have the property that every possible submat must be invertible. I used a standard cauchy matrix for this purpose. Authors recommend appending an identity matrix to the top, to cleanly separate the encoded data into data shards and parity shards. I disregarded this and used a complete cauchy matrix so every shard is encoded.
+
+	I implemented the matrix inversion using LU decomposition, of course with the twist that matrix values are polynomials over GF(2^8).
+
+#### Code
+
+The code is pretty straight forward.
+First, a cauchy matrix is constructed.
+Then, a routine reads the file with input data and passes it on to the encoder.
+The encoder spawns (n+k) sub-encoding routines - one for each row of the cauchy matrix.
+Taking words of size n (n-words) from the incoming data, each routine calculates the dot product between the n-word and its row of the cauchy matrix.
+Then each sub-encoder sends the data to a file writer routine, which writes the encoded data to a file - for a total of (n+k) files.
