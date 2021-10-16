@@ -3,7 +3,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 )
@@ -111,20 +113,20 @@ type chunk struct {
 //	for each row r in cauchy matrix:
 //		make e := dot product <r, d>
 //		send e to writer of r
-func encode(c_reader chan chunk, c_writers []chan byte){
+func eencode(c_reader chan chunk, c_writers []chan byte){
 	k, n := 5, 3
 	//after main routine receives new d, it will use the c_data_available to tell each of the
 	//row routines that a new d is available
 	c_data_available := make([]chan struct{}, len(c_writers))
 
 	//array of n bytes of data
-	data_chunk := make([]byte, chunk_size)
+	var data_chunk chunk
 	wg := new(sync.WaitGroup)
 
 	for i := range c_data_available{ //for every matrix row
 		c_data_available[i] = make(chan struct{})
 
-		go func(c_data_available chan struct{}, c_writer chan byte, data chunk, wg *sync.WaitGroup) { 
+		go func(c_data_available chan struct{}, c_writer chan byte, data *chunk, wg *sync.WaitGroup) { 
 			for {
 				_, ok := <- c_data_available //new data is available
 				if !ok{ //no more data
@@ -138,19 +140,22 @@ func encode(c_reader chan chunk, c_writers []chan byte){
 				//c_writer <- data.data[:data.size] //send encoded byte to writer
 				wg.Done() //signify no longer need current_chunk
 			}
-		}(c_data_available[i], c_writers[i], data_chunk, wg)
+		}(c_data_available[i], c_writers[i], &data_chunk, wg)
 	}
 
+	ok := true
 	for {
 		data_chunk, ok = <- c_reader //receive chunk
 		if !ok{ //channel closed
-			for ch := range c_data_available{
-				close(ch)
+			for i := range c_data_available{
+				close(c_data_available[i])
 			}
+			return
 		}
+		fmt.Println(data_chunk.size)
 		wg.Add(n+k) //set up wait for routines
-		for _, ch := range c_data_available { //tell routines they may read chunk
-			ch <- struct{}{}
+		for i := range c_data_available { //tell routines they may read chunk
+			c_data_available[i] <- struct{}{}
 		}
 		wg.Wait() //wait for them to tell you they are finished
 	}
@@ -158,35 +163,50 @@ func encode(c_reader chan chunk, c_writers []chan byte){
 
 
 func main() {
-	k, n = 5, 3
+	k, n := 5, 3
 	filepath := "fajl"
 
 	c_reader := make(chan chunk)
 	go readFile(filepath, c_reader) //make routine which will read file
 
-	var c_writers [n+k]chan byte //one chan for each writer which will write encoded file
+	c_writers := make([]chan byte, n+k)//one chan for each writer which will write encoded file
 	for i := range c_writers {
 		c_writers[i] = make(chan byte, 3)
-		outpath := filepath + "_i.enc"
+		outpath := filepath + "_" + strconv.Itoa(i) + ".enc"
 		go writeFile(outpath, c_writers[i]) //spawn n+k routines which will write encoded files
 	}
 
-	go encode(c_reader, c_writers) //read data, encode it, send it to writers
+	go eencode(c_reader, c_writers) //read data, encode it, send it to writers
+	time.Sleep(1*time.MiliSecond)
 }
 
 func writeFile(path string, c chan byte) {
-	  file, err := os.Create(path)
-	  if err != nil {
-	  		fmt.Println(err)
-	  }
-	  defer file.Close()
+  file, err := os.Create(path)
+  if err != nil {
+		fmt.Println(err)
+  }
+  defer file.Close()
 
-	  for b := range c { //receive byte, write to file
-			n, err := file.Write(b)
+	buf := make([]byte, chunk_size)
+	ix := 0
+	for b := range c { //receive byte, write to file
+		buf[ix] = b
+		ix++
+		if ix == len(buf)-1 {
+			ix = 0
+			_, err := file.Write(buf)
 			if err != nil {
 				fmt.Println(err)
 			}
-	  }
+		}
+	}
+
+	if ix > 0 {
+		_, err := file.Write(buf[:ix])
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
 }
 
 //read bytes from file, send them to channel c
@@ -201,10 +221,12 @@ func readFile(path string, c chan chunk) {
 		var chunky chunk
 		chunky.data = make([]byte, chunk_size)
 
-		chunky.size, err := file.Read(chunky.data)
+		chunky.size, err = file.Read(chunky.data)
 		if err != nil {
 			if err == io.EOF{
-				c <- chunky
+				if chunky.size > 0{
+					c <- chunky
+				}
 				close(c)
 				break
 			} else{
