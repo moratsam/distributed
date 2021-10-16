@@ -88,12 +88,19 @@ func (m *Manager) Decode(enc [][]byte) ([]byte, error) {
 	get_LU(cauchy)
 	m.inv = invert_LU(cauchy)
 	data := solve_from_inverse(m.inv, enc[0:m.n])
+	for i := range data[0]{
+		for j := range data {
+			fmt.Printf("%c", data[j][i])
+		}
+	}
 
+	/*
 	for _,data_part := range data{
 		for _, c := range(data_part){
 			fmt.Printf("%c", c)
 		}
 	}
+	*/
 	fmt.Println()
 	return nil, nil
 }
@@ -135,12 +142,27 @@ func (m *Manager) eencode(c_reader chan chunk, c_writers []chan byte){
 					return
 				}
 
-				var encoded_byte byte
 				for z:=0; z<data.size; z+=int(m.n){ //for every n-word of data
-					for i := range cauchy_row { //do dot product of the n-word with cauchy row
-						encoded_byte = add(encoded_byte, mul(cauchy_row[i], data.data[z+i]))
+					var encoded_byte byte
+					for ix := range cauchy_row { //do dot product of the n-word with cauchy row
+						if i == 1111 && z == 0 {
+							fmt.Println("z", z, " ix", ix)
+							fmt.Println("\tbyte: ", encoded_byte)
+							fmt.Println("\tcau: ", cauchy_row[ix])
+							fmt.Println("\tdat: ", data.data[z+ix])
+							fmt.Println("\tmul: ", mul(cauchy_row[ix], data.data[z+ix]))
+							fmt.Println("\tadd: ", add(encoded_byte, mul(cauchy_row[ix], data.data[z+ix])))
+							fmt.Println()
+						}
+						encoded_byte = add(encoded_byte, mul(cauchy_row[ix], data.data[z+ix]))
 					}
-					fmt.Println(i, encoded_byte)
+					/*
+					if i == 0{
+						fmt.Println(i, cauchy_row)
+						fmt.Println(i, data.data[z:z+int(m.n)])
+						fmt.Println(i, encoded_byte)
+					}
+					*/
 					c_writer <- encoded_byte //send it to writer
 				}
 
@@ -162,10 +184,7 @@ func (m *Manager) eencode(c_reader chan chunk, c_writers []chan byte){
 		wg.Add(n+k) //set up wait for routines
 
 		if data_chunk.size % int(m.n) != 0 { //add up some zeros
-			for z:=0; z < data_chunk.size % int(m.n); z++{
-				ix := z + data_chunk.size
-				data_chunk.data[ix] = 0 //TODO this probably isnt necessary, just adjust .size
-			}
+			fmt.Println("neki caram tuki")
 			data_chunk.size += (data_chunk.size % int(m.n))
 		}
 
@@ -178,8 +197,29 @@ func (m *Manager) eencode(c_reader chan chunk, c_writers []chan byte){
 }
 
 
-func main() {
+func (m *Manager) ddecode(){
+		
+		var filepath string
+		subset := []int{0, 1, 3}
+		
+		encoded := make([][]byte, len(subset))
+
+		for i,el := range subset {
+			filepath = "fajl_" + strconv.Itoa(el) + ".enc"
+			c_reader := make(chan chunk)
+			go readFile(filepath, c_reader, m.chunk_size)
+			chunky := <- c_reader
+			encoded[i] = chunky.data[:chunky.size]
+		}
+		//fmt.Println("encccc:  ", encoded)
+		m.Decode(encoded)
+}
+
+
+func nov_main() {
 	m := NewManager(5, 3)
+
+
 	filepath := "fajl"
 
 	c_reader := make(chan chunk)
@@ -194,6 +234,7 @@ func main() {
 
 	go m.eencode(c_reader, c_writers) //read data, encode it, send it to writers
 	time.Sleep(1*time.Second)
+	m.ddecode()
 }
 
 func writeFile(path string, c chan byte, chunk_size int) {
@@ -225,6 +266,7 @@ func writeFile(path string, c chan byte, chunk_size int) {
 	}
 }
 
+// kajla 107 97 106 108 97 10 
 //read bytes from file, send them to channel c
 func readFile(path string, c chan chunk, chunk_size int) {
 	file, err := os.Open(path)
@@ -249,18 +291,36 @@ func readFile(path string, c chan chunk, chunk_size int) {
 				fmt.Println(err)
 			}
 		}
+		/*
+		for i := range chunky.data[:chunky.size] {
+			fmt.Println(chunky.data[i])
+		}
+		fmt.Println("\n\n")
+		*/
 		c <- chunky
 	}
 }
 
+func main(){
+	nov_main()
+	//cain()
+	time.Sleep(1*time.Second)
+}
+
 /*
 */
+//encoded kajla: [[0 164 172] [1 9 89] [2 60 173] [3 155 14] [4 23 199] [5 163 103] [6 29 156] [7 120 181]]
+
 func cain() {
 
 	m := NewManager(5, 3)
-	data := [][]byte{{111}, {111}, {10}}
+	data := [][]byte{{107, 97}, {106, 108}, {97, 10}}
 	//[[0 222] [1 70] [2 74] [3 183] [4 95] [5 194] [6 58] [7 197]]
+	fmt.Println("pravilno")
+	fmt.Println(m.mat[0])
 	enc, _ := m.Encode(data)
+	fmt.Println(enc)
+	return
 
 	//make n-subset of [enc], which will be put to Decode to retrieve original [data]
 	for i:=0; i<len(enc); i++{
