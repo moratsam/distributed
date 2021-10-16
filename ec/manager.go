@@ -147,15 +147,15 @@ func eencode(c_reader chan chunk, c_writers []chan byte){
 	for {
 		data_chunk, ok = <- c_reader //receive chunk
 		if !ok{ //channel closed
-			for i := range c_data_available{
-				close(c_data_available[i])
+			for _,c := range c_data_available{
+				close(c)
 			}
 			return
 		}
 		fmt.Println(data_chunk.size)
 		wg.Add(n+k) //set up wait for routines
-		for i := range c_data_available { //tell routines they may read chunk
-			c_data_available[i] <- struct{}{}
+		for _,c := range c_data_available { //tell routines they may read chunk
+			c <- struct{}{}
 		}
 		wg.Wait() //wait for them to tell you they are finished
 	}
@@ -177,7 +177,7 @@ func main() {
 	}
 
 	go eencode(c_reader, c_writers) //read data, encode it, send it to writers
-	time.Sleep(1*time.MiliSecond)
+	time.Sleep(1*time.Second)
 }
 
 func writeFile(path string, c chan byte) {
