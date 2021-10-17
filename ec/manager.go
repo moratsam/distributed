@@ -86,6 +86,8 @@ func (m *Manager) Decode(enc [][]byte) ([]byte, error) {
 	get_LU(cauchy)
 	m.inv = invert_LU(cauchy)
 	data := solve_from_inverse(m.inv, enc[0:m.n])
+	/*
+	*/
 	for i := range data[0]{
 		for j := range data {
 			fmt.Printf("%c", data[j][i])
@@ -117,7 +119,7 @@ type chunk struct {
 //		make e := dot product <r, d>
 //		send e to writer of r
 func (m *Manager) eencode(c_reader chan chunk, c_writers []chan byte){
-	k, n := 5, 3
+	k, n := int(m.k), int(m.n)
 	//after main routine receives new d, it will use the c_data_available to tell each of the
 	//row routines that a new d is available
 	c_data_available := make([]chan struct{}, len(c_writers))
@@ -143,9 +145,9 @@ func (m *Manager) eencode(c_reader chan chunk, c_writers []chan byte){
 				for z:=0; z<data.size; z+=int(m.n){ //for every n-word of data
 					var encoded_byte byte
 					for ix := range cauchy_row { //do dot product of the n-word with cauchy row
-						if i == 1111 && z == 0 {
-							fmt.Println("z", z, " ix", ix)
-							fmt.Println("\tbyte: ", encoded_byte)
+						if i == 0 && z == 0 {
+							fmt.Println("z", z, " j", ix)
+							fmt.Println("\tenc: ", encoded_byte)
 							fmt.Println("\tcau: ", cauchy_row[ix])
 							fmt.Println("\tdat: ", data.data[z+ix])
 							fmt.Println("\tmul: ", mul(cauchy_row[ix], data.data[z+ix]))
@@ -161,6 +163,10 @@ func (m *Manager) eencode(c_reader chan chunk, c_writers []chan byte){
 						fmt.Println(i, encoded_byte)
 					}
 					*/
+					if i == 0 {
+						fmt.Println("c row 0", cauchy_row)
+						fmt.Println("encoded byte: ", encoded_byte)
+					}
 					c_writer <- encoded_byte //send it to writer
 				}
 
@@ -235,7 +241,7 @@ func (m *Manager) ddecode(){
 
 	for chunky := range c_encoded_data{
 		fmt.Println("chunk size: ", chunky.size)
-		fmt.Println("chunk data: ", chunky.data[:chunky.size])
+		fmt.Println("chunk data: ", chunky.data[:chunky.size], "\n")
 		for ix:=0; ix<chunky.size; ix+=int(m.n) {
 			//decode
 			data_word := decode_word(m.inv, chunky.data[ix:ix+int(m.n)])
@@ -275,7 +281,7 @@ func nov_main() {
 func main(){
 	nov_main()
 	fmt.Println("\n\n")
-	//cain()
+	cain()
 	//time.Sleep(1*time.Second)
 }
 
@@ -287,12 +293,12 @@ func main(){
 func cain() {
 
 	m := NewManager(5, 3)
-	data := [][]byte{{111}, {111}, {10}}
+	data := [][]byte{{'k', 'l'}, {'a', 'a'}, {'j', 10}}
 	//[[0 222] [1 70] [2 74] [3 183] [4 95] [5 194] [6 58] [7 197]]
 	fmt.Println("pravilno")
-	fmt.Println(m.mat[0])
+//	fmt.Println("c row 0: ", m.mat[0])
 	enc, _ := m.Encode(data)
-	fmt.Println(enc)
+//	fmt.Println(enc)
 
 	subset := [][]byte{enc[0], enc[1], enc[3]}
 	m.Decode(subset)

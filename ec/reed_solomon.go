@@ -28,7 +28,6 @@ func create_cauchy(k, n byte) [][]byte{
 //[enc] = (mat)[data]
 func encode(data [][]byte, mat [][]byte) [][]byte {
 	k, n, data_columns := len(mat)-len(mat[0]), len(mat[0]), len(data[0])
-	fmt.Println()
 	
 	enc := make([][]byte, n+k)
 	for i := range enc{
@@ -40,6 +39,17 @@ func encode(data [][]byte, mat [][]byte) [][]byte {
 		enc[r][0] = byte(r) //record row index, which is needed in decoding
 		for y=0; y<data_columns; y++{ //for every column in data
 			for j=0; j<n; j++ { //make sum of (row*column)
+/*
+				if r == 0 && y == 0 {
+					fmt.Println("r: ", r, "j: ", j)
+					fmt.Println("\tenc[r]", enc[r][1+y])
+					fmt.Println("\tcau", mat[r][j])
+					fmt.Println("\tdat", data[j][y])
+					fmt.Println("\tmul", mul(mat[r][j], data[j][y]))
+					fmt.Println("\tadd", add(enc[r][1+y], mul(mat[r][j], data[j][y])))
+					
+				}
+*/
 				enc[r][1+y] = add(enc[r][1+y], mul(mat[r][j], data[j][y]))
 			}
 		}
@@ -125,18 +135,18 @@ func decode_word(inv [][]byte, enc []byte) []byte{
 	//calculate W := (L^-1)[enc]
 	w := make([]byte, dim)
 	for r:=0; r<dim; r++ { //for every row in inv
-		fmt.Println("row: ", inv[r])
+	//	fmt.Println("inv row: ", inv[r])
 		for j:=0; j<=r; j++ {
-			fmt.Println("r: ", r, "j: ", j)
-			fmt.Println("\tw[j]", w[r])
-			fmt.Println("\tenc[j]", enc[j])
+//			fmt.Println("r: ", r, "j: ", j)
+//			fmt.Println("\tw[j]", w[r])
+//			fmt.Println("\tenc[j]", enc[j])
 			if r == j { //diagonal values were overwritten in LU, but pretend they're still 1
 				w[r] = add(w[r], enc[j])
-				fmt.Println("\tadd", add(w[r], enc[j]))
+//				fmt.Println("\tadd", add(w[r], enc[j]))
 			} else {
 				w[r] = add(w[r], mul(inv[r][j], enc[j]))
-				fmt.Println("\tmul", mul(inv[r][j], enc[j]))
-				fmt.Println("\tadd", add(w[r], mul(inv[r][j], enc[j])))
+//				fmt.Println("\tmul", mul(inv[r][j], enc[j]))
+//				fmt.Println("\tadd", add(w[r], mul(inv[r][j], enc[j])))
 			}
 		}
 	}
@@ -147,6 +157,7 @@ func decode_word(inv [][]byte, enc []byte) []byte{
 			data_word[r] = add(data_word[r], mul(inv[r][j], w[j]))
 		}
 	}
+	fmt.Println()
 	return data_word
 }
 
@@ -165,19 +176,22 @@ func solve_from_inverse(inv, enc [][]byte) [][]byte {
 	}
 	//calculate W := (L^-1)[enc]
 	for r=0; r<dim; r++ { //for every row in inv
-		fmt.Println("row: ", inv[r])
+//		fmt.Println("row: ", inv[r])
 		for y=0; y<data_columns; y++{ //for every column in data
 			for j=0; j<=r; j++ { //make sum of (row*column)
-				fmt.Println("r: ", r, "j: ", j)
-				fmt.Println("\tw[j]", w[r][y])
-				fmt.Println("\tenc[j]", enc[j][1+y])
+				if y == 0 {
+//					fmt.Println("r: ", r, "j: ", j)
+//					fmt.Println("\tw[j]", w[r][y])
+//					fmt.Println("\tenc[j]", enc[j][1+y])
+					
+				}
 				if r == j { //diagonal values were overwritten, but pretend they're still 1
 					w[r][y] = add(w[r][y], enc[j][1+y])
-					fmt.Println("\tadd", add(w[r][y], enc[j][1+y]))
+//					fmt.Println("\tadd", add(w[r][y], enc[j][1+y]))
 				} else {
 					w[r][y] = add(w[r][y], mul(inv[r][j], enc[j][1+y]))
-					fmt.Println("\tmul", mul(inv[r][j], enc[j][1+y]))
-					fmt.Println("\tadd", add(w[r][y], mul(inv[r][j], enc[j][1+y])))
+//					fmt.Println("\tmul", mul(inv[r][j], enc[j][1+y]))
+//					fmt.Println("\tadd", add(w[r][y], mul(inv[r][j], enc[j][1+y])))
 				}
 			}
 		}

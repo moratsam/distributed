@@ -55,12 +55,48 @@ func readEncoded(filepaths []string, c_row_indexes chan int, c_encoded_data chan
 
 
 
+	var chunky chunk
+	chunky.data = make([]byte, chunk_size)
+
+	files_closed := false
+	for {
+		enc_byte := make([]byte, 1)
+		for _, k := range keys {
+			file := file_handles[row_to_filepath[k]]
+			_, err := file.Read(enc_byte)
+			if err != nil {
+				if err == io.EOF {
+					files_closed = true
+					break
+				} else {
+					fmt.Println(err)
+					return
+				}
+			}
+			chunky.data[chunky.size] = enc_byte[0]
+			chunky.size++
+		}
+		
+		if chunky.size == chunk_size {
+			c_encoded_data <- chunky
+			chunky.size = 0
+		}
+
+		if files_closed{
+			break
+		}
+	}
+
+	c_encoded_data <- chunky
+	return
+
+
 	var tmp_chunk chunk
 	tmp_chunk.data = make([]byte, chunk_size)
 
 	for _, k := range keys { //for each file
 		file := file_handles[row_to_filepath[k]]
-		fmt.Println("handle num: ", row_to_filepath[k])
+	//	fmt.Println("handle num: ", row_to_filepath[k])
 
 		for { //read encoded data chunks
 			var chunky chunk
@@ -139,9 +175,8 @@ func readEncoded(filepaths []string, c_row_indexes chan int, c_encoded_data chan
 		if tmp_chunk.size % n != 0 {
 			fmt.Println("error, not right amount of data")
 		} else {
-			fmt.Println("tuki sm")
-			fmt.Println("size:", tmp_chunk.size)
-			fmt.Println("data:", tmp_chunk.data[0:tmp_chunk.size])
+		//	fmt.Println("size:", tmp_chunk.size)
+		//	fmt.Println("data:", tmp_chunk.data[0:tmp_chunk.size])
 
 			c_encoded_data <- tmp_chunk
 		}
