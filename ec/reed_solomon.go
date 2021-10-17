@@ -119,6 +119,37 @@ func invert_LU(mat [][]byte) [][]byte {
 }
 
 
+func decode_word(inv [][]byte, enc []byte) []byte{
+	dim := len(inv[0])
+
+	//calculate W := (L^-1)[enc]
+	w := make([]byte, dim)
+	for r:=0; r<dim; r++ { //for every row in inv
+		fmt.Println("row: ", inv[r])
+		for j:=0; j<=r; j++ {
+			fmt.Println("r: ", r, "j: ", j)
+			fmt.Println("\tw[j]", w[r])
+			fmt.Println("\tenc[j]", enc[j])
+			if r == j { //diagonal values were overwritten in LU, but pretend they're still 1
+				w[r] = add(w[r], enc[j])
+				fmt.Println("\tadd", add(w[r], enc[j]))
+			} else {
+				w[r] = add(w[r], mul(inv[r][j], enc[j]))
+				fmt.Println("\tmul", mul(inv[r][j], enc[j]))
+				fmt.Println("\tadd", add(w[r], mul(inv[r][j], enc[j])))
+			}
+		}
+	}
+
+	data_word := make([]byte, dim)
+	for r:=dim-1; r>=0; r-- {
+		for j:=dim-1; j>=r; j-- {
+			data_word[r] = add(data_word[r], mul(inv[r][j], w[j]))
+		}
+	}
+	return data_word
+}
+
 //(mat)[data] = [enc]
 //(mat^-1)(mat)[data] = (mat^-1)[enc] ==> (mat^-1)[enc] = [data]
 //mat = LU
@@ -134,12 +165,19 @@ func solve_from_inverse(inv, enc [][]byte) [][]byte {
 	}
 	//calculate W := (L^-1)[enc]
 	for r=0; r<dim; r++ { //for every row in inv
+		fmt.Println("row: ", inv[r])
 		for y=0; y<data_columns; y++{ //for every column in data
 			for j=0; j<=r; j++ { //make sum of (row*column)
+				fmt.Println("r: ", r, "j: ", j)
+				fmt.Println("\tw[j]", w[r][y])
+				fmt.Println("\tenc[j]", enc[j][1+y])
 				if r == j { //diagonal values were overwritten, but pretend they're still 1
 					w[r][y] = add(w[r][y], enc[j][1+y])
+					fmt.Println("\tadd", add(w[r][y], enc[j][1+y]))
 				} else {
 					w[r][y] = add(w[r][y], mul(inv[r][j], enc[j][1+y]))
+					fmt.Println("\tmul", mul(inv[r][j], enc[j][1+y]))
+					fmt.Println("\tadd", add(w[r][y], mul(inv[r][j], enc[j][1+y])))
 				}
 			}
 		}

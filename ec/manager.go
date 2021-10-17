@@ -1,8 +1,6 @@
 package main
 import (
 	"fmt"
-	"io"
-	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -198,26 +196,62 @@ func (m *Manager) eencode(c_reader chan chunk, c_writers []chan byte){
 
 
 func (m *Manager) ddecode(){
-		
-		var filepath string
-		subset := []int{0, 1, 3}
-		
-		encoded := make([][]byte, len(subset))
+	cauchy := make([][]byte, m.n) //create matrix for cauchy
+	subset := []int{3, 1, 0}
+	filepaths := make([]string, m.n)
+	for i,el := range subset {
+		filepaths[i] = "fajl_" + strconv.Itoa(el) + ".enc"
+	}
 
-		for i,el := range subset {
-			filepath = "fajl_" + strconv.Itoa(el) + ".enc"
-			c_reader := make(chan chunk)
-			go readFile(filepath, c_reader, m.chunk_size)
-			chunky := <- c_reader
-			encoded[i] = chunky.data[:chunky.size]
+	c_row_indexes := make(chan int)
+	c_encoded_data := make(chan chunk)
+	go readEncoded(filepaths, c_row_indexes, c_encoded_data, m.chunk_size)
+
+	i := 0
+	for row_index := range c_row_indexes {
+		subset[i] = row_index
+		i++
+	}
+
+	for i := range cauchy {
+		cauchy[i] = make([]byte, m.n)
+	}
+
+	for i := range cauchy { //populate it with rows from cauchy matrix
+		for j := range cauchy {
+			cauchy[i][j] = m.mat[subset[i]][j]
 		}
-		//fmt.Println("encccc:  ", encoded)
-		m.Decode(encoded)
+	}
+
+	get_LU(cauchy)
+	m.inv = invert_LU(cauchy)
+		
+	c_writer := make(chan byte, 2*int(m.n))
+	defer close(c_writer)
+	outpath := "dekodiran"
+	go writeFile(outpath, c_writer, m.chunk_size) 
+
+
+
+	for chunky := range c_encoded_data{
+		fmt.Println("chunk size: ", chunky.size)
+		fmt.Println("chunk data: ", chunky.data[:chunky.size])
+		for ix:=0; ix<chunky.size; ix+=int(m.n) {
+			//decode
+			data_word := decode_word(m.inv, chunky.data[ix:ix+int(m.n)])
+			//send to writer
+			for _, b := range data_word {
+				fmt.Printf("%c", b)
+				c_writer <- b
+			}
+		}
+	}
 }
 
 
 func nov_main() {
 	m := NewManager(5, 3)
+
 
 
 	filepath := "fajl"
@@ -237,89 +271,31 @@ func nov_main() {
 	m.ddecode()
 }
 
-func writeFile(path string, c chan byte, chunk_size int) {
-  file, err := os.Create(path)
-  if err != nil {
-		fmt.Println(err)
-  }
-  defer file.Close()
-
-	buf := make([]byte, chunk_size)
-	ix := 0
-	for b := range c { //receive byte, write to file
-		buf[ix] = b
-		ix++
-		if ix == len(buf)-1 {
-			ix = 0
-			_, err := file.Write(buf)
-			if err != nil {
-				fmt.Println(err)
-			}
-		}
-	}
-
-	if ix > 0 {
-		_, err := file.Write(buf[:ix])
-		if err != nil {
-			fmt.Println(err)
-		}
-	}
-}
-
-// kajla 107 97 106 108 97 10 
-//read bytes from file, send them to channel c
-func readFile(path string, c chan chunk, chunk_size int) {
-	file, err := os.Open(path)
-	defer file.Close()
-	if err != nil {
-		fmt.Println("napakica v branju fajla frent")
-	}
-
-	for {
-		var chunky chunk
-		chunky.data = make([]byte, chunk_size)
-
-		chunky.size, err = file.Read(chunky.data)
-		if err != nil {
-			if err == io.EOF{
-				if chunky.size > 0{
-					c <- chunky
-				}
-				close(c)
-				break
-			} else{
-				fmt.Println(err)
-			}
-		}
-		/*
-		for i := range chunky.data[:chunky.size] {
-			fmt.Println(chunky.data[i])
-		}
-		fmt.Println("\n\n")
-		*/
-		c <- chunky
-	}
-}
 
 func main(){
 	nov_main()
+	fmt.Println("\n\n")
 	//cain()
-	time.Sleep(1*time.Second)
+	//time.Sleep(1*time.Second)
 }
 
 /*
 */
 //encoded kajla: [[0 164 172] [1 9 89] [2 60 173] [3 155 14] [4 23 199] [5 163 103] [6 29 156] [7 120 181]]
+//encoded oo: [[0 222] [1 70] [2 74] [3 183] [4 95] [5 194] [6 58] [7 197]]
 
 func cain() {
 
 	m := NewManager(5, 3)
-	data := [][]byte{{107, 97}, {106, 108}, {97, 10}}
+	data := [][]byte{{111}, {111}, {10}}
 	//[[0 222] [1 70] [2 74] [3 183] [4 95] [5 194] [6 58] [7 197]]
 	fmt.Println("pravilno")
 	fmt.Println(m.mat[0])
 	enc, _ := m.Encode(data)
 	fmt.Println(enc)
+
+	subset := [][]byte{enc[0], enc[1], enc[3]}
+	m.Decode(subset)
 	return
 
 	//make n-subset of [enc], which will be put to Decode to retrieve original [data]
