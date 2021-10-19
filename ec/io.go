@@ -185,12 +185,13 @@ func readEncoded(filepaths []string, c_row_indexes chan int, c_encoded_data chan
 
 
 
-func writeFile(path string, c chan byte, chunk_size int) {
-  file, err := os.Create(path)
-  if err != nil {
+func writeFile(path string, c chan byte, chunk_size int, c_done chan struct{}) {
+	file, err := os.Create(path)
+	if err != nil {
 		fmt.Println(err)
-  }
-  defer file.Close()
+	}
+	defer file.Close()
+	defer close(c_done)
 
 	buf := make([]byte, chunk_size)
 	ix := 0
@@ -212,6 +213,7 @@ func writeFile(path string, c chan byte, chunk_size int) {
 			fmt.Println(err)
 		}
 	}
+
 }
 
 //read bytes from file, send them to channel c

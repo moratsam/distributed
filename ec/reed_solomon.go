@@ -1,6 +1,6 @@
 package main
 import (
-	"fmt"
+	_"fmt"
 )
 
 //------------------------------------
@@ -20,41 +20,6 @@ func create_cauchy(k, n byte) [][]byte{
 		}
 	}
 	return mat
-}
-
-//[data] has dimensions nxY for arbitrary Y
-//[enc] has dimensions (n+k)x(1+Y)
-//the first element of each row is index of mat row that was used to encode it
-//[enc] = (mat)[data]
-func encode(data [][]byte, mat [][]byte) [][]byte {
-	k, n, data_columns := len(mat)-len(mat[0]), len(mat[0]), len(data[0])
-	
-	enc := make([][]byte, n+k)
-	for i := range enc{
-		enc[i] = make([]byte, 1+len(data[0]))
-	}
-
-	var r, j, y int
-	for r=0; r<n+k; r++ { //for every row in mat
-		enc[r][0] = byte(r) //record row index, which is needed in decoding
-		for y=0; y<data_columns; y++{ //for every column in data
-			for j=0; j<n; j++ { //make sum of (row*column)
-/*
-				if r == 0 && y == 0 {
-					fmt.Println("r: ", r, "j: ", j)
-					fmt.Println("\tenc[r]", enc[r][1+y])
-					fmt.Println("\tcau", mat[r][j])
-					fmt.Println("\tdat", data[j][y])
-					fmt.Println("\tmul", mul(mat[r][j], data[j][y]))
-					fmt.Println("\tadd", add(enc[r][1+y], mul(mat[r][j], data[j][y])))
-					
-				}
-*/
-				enc[r][1+y] = add(enc[r][1+y], mul(mat[r][j], data[j][y]))
-			}
-		}
-	}
-	return enc
 }
 
 
@@ -157,57 +122,6 @@ func decode_word(inv [][]byte, enc []byte) []byte{
 			data_word[r] = add(data_word[r], mul(inv[r][j], w[j]))
 		}
 	}
-	fmt.Println()
 	return data_word
 }
 
-//(mat)[data] = [enc]
-//(mat^-1)(mat)[data] = (mat^-1)[enc] ==> (mat^-1)[enc] = [data]
-//mat = LU
-//mat^-1 = (U^-1)(L^-1)  
-//(U^-1)(L^-1)[enc] = [data]
-func solve_from_inverse(inv, enc [][]byte) [][]byte {
-	dim, data_columns := len(inv[0]), len(enc[0]) -1 //-1 because first el is index of row
-	var r, y, j int
-
-	w := make([][]byte, dim)
-	for i := range w{
-		w[i] = make([]byte, data_columns)
-	}
-	//calculate W := (L^-1)[enc]
-	for r=0; r<dim; r++ { //for every row in inv
-//		fmt.Println("row: ", inv[r])
-		for y=0; y<data_columns; y++{ //for every column in data
-			for j=0; j<=r; j++ { //make sum of (row*column)
-				if y == 0 {
-//					fmt.Println("r: ", r, "j: ", j)
-//					fmt.Println("\tw[j]", w[r][y])
-//					fmt.Println("\tenc[j]", enc[j][1+y])
-					
-				}
-				if r == j { //diagonal values were overwritten, but pretend they're still 1
-					w[r][y] = add(w[r][y], enc[j][1+y])
-//					fmt.Println("\tadd", add(w[r][y], enc[j][1+y]))
-				} else {
-					w[r][y] = add(w[r][y], mul(inv[r][j], enc[j][1+y]))
-//					fmt.Println("\tmul", mul(inv[r][j], enc[j][1+y]))
-//					fmt.Println("\tadd", add(w[r][y], mul(inv[r][j], enc[j][1+y])))
-				}
-			}
-		}
-	}
-
-	data := make([][]byte, dim)
-	for i := range data{
-		data[i] = make([]byte, data_columns)
-	}
-	//calculate [data] = (U^-1)W
-	for r=dim-1; r>=0; r-- {
-		for y=0; y<data_columns; y++{
-			for j=dim-1; j>=r; j-- {
-				data[r][y] = add(data[r][y], mul(inv[r][j], w[j][y]))
-			}
-		}
-	}
-	return data
-}

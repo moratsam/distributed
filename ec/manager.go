@@ -1,11 +1,12 @@
 package main
 import (
 	"fmt"
+	"math/rand"
 	"strconv"
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
+	_"github.com/pkg/errors"
 )
 
 //------------------------------------
@@ -49,65 +50,6 @@ func NewManager(k, n byte) *Manager {
 	return m
 }
 
-func (m *Manager) Encode(data [][]byte) ([][]byte, error) {
-
-	if len(data) != int(m.n) {
-		return nil, errors.New("incorrect data length")
-	}
-	
-	return encode(data, m.mat), nil
-}
-
-//enc is [[ix1, enc1], [ix2, enc2]..], where ix gives row of cauchy matrix
-func (m *Manager) Decode(enc [][]byte) ([]byte, error) {
-	if len(enc) < int(m.n) {
-		return nil, errors.New("not enough encoded parts to reconstruct original data")
-	}
-
-	//TODO sort the indexes ASC
-	//copy first n indexes of the encoded parts
-	//needed to know which rows of the cauchy matrix were used to encrypt data
-	ixs := make([]byte, m.n)
-	for i := range ixs { 
-		ixs[i] = enc[i][0]
-	}
-
-	cauchy := make([][]byte, m.n) //create matrix for cauchy
-	for i := range cauchy {
-		cauchy[i] = make([]byte, m.n)
-	}
-
-	for i := range cauchy { //populate it with rows from cauchy matrix
-		for j := range cauchy {
-			cauchy[i][j] = m.mat[ixs[i]][j]
-		}
-	}
-
-	get_LU(cauchy)
-	m.inv = invert_LU(cauchy)
-	data := solve_from_inverse(m.inv, enc[0:m.n])
-	/*
-	*/
-	for i := range data[0]{
-		for j := range data {
-			fmt.Printf("%c", data[j][i])
-		}
-	}
-
-	/*
-	for _,data_part := range data{
-		for _, c := range(data_part){
-			fmt.Printf("%c", c)
-		}
-	}
-	*/
-	fmt.Println()
-	return nil, nil
-}
-
-
-
-
 type chunk struct {
 	size int
 	data []byte
@@ -118,7 +60,7 @@ type chunk struct {
 //	for each row r in cauchy matrix:
 //		make e := dot product <r, d>
 //		send e to writer of r
-func (m *Manager) eencode(c_reader chan chunk, c_writers []chan byte){
+func (m *Manager) encode(c_reader chan chunk, c_writers []chan byte){
 	k, n := int(m.k), int(m.n)
 	//after main routine receives new d, it will use the c_data_available to tell each of the
 	//row routines that a new d is available
@@ -145,32 +87,11 @@ func (m *Manager) eencode(c_reader chan chunk, c_writers []chan byte){
 				for z:=0; z<data.size; z+=int(m.n){ //for every n-word of data
 					var encoded_byte byte
 					for ix := range cauchy_row { //do dot product of the n-word with cauchy row
-						if i == 0 && z == 0 {
-							fmt.Println("z", z, " j", ix)
-							fmt.Println("\tenc: ", encoded_byte)
-							fmt.Println("\tcau: ", cauchy_row[ix])
-							fmt.Println("\tdat: ", data.data[z+ix])
-							fmt.Println("\tmul: ", mul(cauchy_row[ix], data.data[z+ix]))
-							fmt.Println("\tadd: ", add(encoded_byte, mul(cauchy_row[ix], data.data[z+ix])))
-							fmt.Println()
-						}
 						encoded_byte = add(encoded_byte, mul(cauchy_row[ix], data.data[z+ix]))
-					}
-					/*
-					if i == 0{
-						fmt.Println(i, cauchy_row)
-						fmt.Println(i, data.data[z:z+int(m.n)])
-						fmt.Println(i, encoded_byte)
-					}
-					*/
-					if i == 0 {
-						fmt.Println("c row 0", cauchy_row)
-						fmt.Println("encoded byte: ", encoded_byte)
 					}
 					c_writer <- encoded_byte //send it to writer
 				}
 
-				//c_writer <- data.data[:data.size] //send encoded byte to writer
 				wg.Done() //signify no longer need current_chunk
 			}
 		}(c_data_available[i], c_writers[i], &data_chunk, wg, i)
@@ -200,125 +121,100 @@ func (m *Manager) eencode(c_reader chan chunk, c_writers []chan byte){
 	}
 }
 
-
-func (m *Manager) ddecode(){
-	cauchy := make([][]byte, m.n) //create matrix for cauchy
-	subset := []int{3, 1, 0}
-	filepaths := make([]string, m.n)
-	for i,el := range subset {
-		filepaths[i] = "fajl_" + strconv.Itoa(el) + ".enc"
+func (m *Manager) create_cauchy_submatrix(row_indexes []int) [][]byte {
+	submat := make([][]byte, m.n) //create matrix for cauchy
+	for i := range submat{
+		submat[i] = make([]byte, m.n)
 	}
+
+	for i := range submat { //populate it with rows from whole cauchy matrix
+		submat[i] = m.mat[row_indexes[i]][:]
+	}
+	return submat
+}
+
+
+func (m *Manager) Decode(enc_paths []string){
 
 	c_row_indexes := make(chan int)
 	c_encoded_data := make(chan chunk)
-	go readEncoded(filepaths, c_row_indexes, c_encoded_data, m.chunk_size)
+	go readEncoded(enc_paths, c_row_indexes, c_encoded_data, m.chunk_size)
 
-	i := 0
+
+	i, row_indexes := 0, make([]int, m.n) //indexes of cauchy rows that encoded the files
 	for row_index := range c_row_indexes {
-		subset[i] = row_index
+		row_indexes[i] = row_index
 		i++
 	}
 
-	for i := range cauchy {
-		cauchy[i] = make([]byte, m.n)
-	}
-
-	for i := range cauchy { //populate it with rows from cauchy matrix
-		for j := range cauchy {
-			cauchy[i][j] = m.mat[subset[i]][j]
-		}
-	}
+	cauchy := m.create_cauchy_submatrix(row_indexes)
 
 	get_LU(cauchy)
 	m.inv = invert_LU(cauchy)
 		
 	c_writer := make(chan byte, 2*int(m.n))
-	defer close(c_writer)
+	c_writer_done := make(chan struct{})
 	outpath := "dekodiran"
-	go writeFile(outpath, c_writer, m.chunk_size) 
-
-
+	go writeFile(outpath, c_writer, m.chunk_size, c_writer_done) 
 
 	for chunky := range c_encoded_data{
-		fmt.Println("chunk size: ", chunky.size)
-		fmt.Println("chunk data: ", chunky.data[:chunky.size], "\n")
+		//fmt.Println("chunk size: ", chunky.size)
+		//fmt.Println("chunk data: ", chunky.data[:chunky.size])
 		for ix:=0; ix<chunky.size; ix+=int(m.n) {
 			//decode
 			data_word := decode_word(m.inv, chunky.data[ix:ix+int(m.n)])
 			//send to writer
 			for _, b := range data_word {
-				fmt.Printf("%c", b)
+				//fmt.Printf("%c", b)
 				c_writer <- b
 			}
 		}
 	}
+	close(c_writer)
+	for _ = range c_writer_done {} //just wait for chan to close
 }
 
-
-func nov_main() {
-	m := NewManager(5, 3)
-
-
-
-	filepath := "fajl"
-
+//encodes file given by in_path, returns paths to encoded files
+func (m *Manager) Encode(in_path string) ([]string, error) {
 	c_reader := make(chan chunk)
-	go readFile(filepath, c_reader, m.chunk_size) //make routine which will read file
+	go readFile(in_path, c_reader, m.chunk_size) //make routine which will read file
 
+	out_paths := make([]string, m.n+m.k)
 	c_writers := make([]chan byte, m.n+m.k)//one chan for each writer which will write encoded file
+	c_writers_done := make([]chan struct{}, m.n+m.k) //chan for writer to signal it is done
 	for i := range c_writers {
 		c_writers[i] = make(chan byte, 3)
-		outpath := filepath + "_" + strconv.Itoa(i) + ".enc"
-		go writeFile(outpath, c_writers[i], m.chunk_size) //spawn n+k routines which will write encoded files
+		out_paths[i] = in_path + "_" + strconv.Itoa(i) + ".enc"
+		c_writers_done[i] = make(chan struct{})
+		go writeFile(out_paths[i], c_writers[i], m.chunk_size, c_writers_done[i]) //spawn n+k routines which will write encoded files
 	}
 
-	go m.eencode(c_reader, c_writers) //read data, encode it, send it to writers
-	time.Sleep(1*time.Second)
-	m.ddecode()
+	go m.encode(c_reader, c_writers) //read data, encode it, send it to writers
+
+
+	//wait for every writer to be done
+	for _, c := range c_writers_done{
+		for _ = range c {} 	}
+
+	return out_paths, nil
 }
 
 
 func main(){
-	nov_main()
-	fmt.Println("\n\n")
-	cain()
-	//time.Sleep(1*time.Second)
-}
-
-/*
-*/
-//encoded kajla: [[0 164 172] [1 9 89] [2 60 173] [3 155 14] [4 23 199] [5 163 103] [6 29 156] [7 120 181]]
-//encoded oo: [[0 222] [1 70] [2 74] [3 183] [4 95] [5 194] [6 58] [7 197]]
-
-func cain() {
-
 	m := NewManager(5, 3)
-	data := [][]byte{{'k', 'l'}, {'a', 'a'}, {'j', 10}}
-	//[[0 222] [1 70] [2 74] [3 183] [4 95] [5 194] [6 58] [7 197]]
-	fmt.Println("pravilno")
-//	fmt.Println("c row 0: ", m.mat[0])
-	enc, _ := m.Encode(data)
-//	fmt.Println(enc)
-
-	subset := [][]byte{enc[0], enc[1], enc[3]}
-	m.Decode(subset)
-	return
-
-	//make n-subset of [enc], which will be put to Decode to retrieve original [data]
-	for i:=0; i<len(enc); i++{
-		for j:=1+i; j<len(enc); j++ {
-			for k:=1+j; k<len(enc); k++{
-				for l:=1+k; l<len(enc); l++{
-					subset := [][]byte{enc[i], enc[j], enc[k], enc[l]}
-					_, err := m.Decode(subset)
-					if err != nil{
-						fmt.Println(err)
-					}
-				}
-			}
+	out_paths, _ := m.Encode("fajl")
+	
+	//create random subset of out files to use for decoding
+	rand.Seed(time.Now().UnixNano())
+	subset := make([]string, m.n)
+	for i, path_ix := range rand.Perm(int(m.k+m.n)){
+		if i == int(m.n) {
+			break
 		}
+		subset[i] = out_paths[path_ix]
 	}
+	fmt.Println(subset)
 
-	//zares := [][]byte{{2, enc[2]},{5, enc[5]},{7,enc[7]}}
-	//m.Decode(zares)
+	m.Decode(subset)
 }
+
