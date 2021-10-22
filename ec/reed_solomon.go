@@ -22,6 +22,22 @@ func create_cauchy(k, n byte) [][]byte{
 	return mat
 }
 
+//from the cauchy matrix mat, select only rows from row_indexes
+func create_cauchy_submatrix(mat [][]byte, row_indexes []int) [][]byte {
+	n := len(mat[0])
+	submat := make([][]byte, n) //create matrix for cauchy
+	for i := range submat{
+		submat[i] = make([]byte, n)
+	}
+
+	for i := range submat { //populate it with rows from whole cauchy matrix
+		submat[i] = mat[row_indexes[i]][:]
+	}
+
+	return submat
+}
+
+
 
 func get_LU(mat [][]byte) {
 	dim := byte(len( mat[0] ))
@@ -93,6 +109,12 @@ func invert_LU(mat [][]byte) [][]byte {
 	return side
 }
 
+//create an inverse of the cauchy submatrix corresponding to row indexes in row_indexes.
+func create_inverse(mat [][]byte, row_indexes []int) [][]byte {
+	cauchy := create_cauchy_submatrix(mat, row_indexes)
+	get_LU(cauchy)
+	return invert_LU(cauchy)
+}
 
 func decode_word(inv [][]byte, enc []byte) []byte{
 	dim := len(inv[0])
@@ -100,18 +122,11 @@ func decode_word(inv [][]byte, enc []byte) []byte{
 	//calculate W := (L^-1)[enc]
 	w := make([]byte, dim)
 	for r:=0; r<dim; r++ { //for every row in inv
-	//	fmt.Println("inv row: ", inv[r])
 		for j:=0; j<=r; j++ {
-//			fmt.Println("r: ", r, "j: ", j)
-//			fmt.Println("\tw[j]", w[r])
-//			fmt.Println("\tenc[j]", enc[j])
 			if r == j { //diagonal values were overwritten in LU, but pretend they're still 1
 				w[r] = add(w[r], enc[j])
-//				fmt.Println("\tadd", add(w[r], enc[j]))
 			} else {
 				w[r] = add(w[r], mul(inv[r][j], enc[j]))
-//				fmt.Println("\tmul", mul(inv[r][j], enc[j]))
-//				fmt.Println("\tadd", add(w[r], mul(inv[r][j], enc[j])))
 			}
 		}
 	}
