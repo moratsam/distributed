@@ -14,7 +14,6 @@ import (
 type Manager struct {
 	k, n byte
 	mat [][]byte
-	inv [][]byte
 	enc []byte
 }
 
@@ -29,7 +28,6 @@ func NewManager(k, n byte) *Manager {
 		k:		k,
 		n:		n,
 		mat: mat,
-		inv: nil,
 	}
 	return m
 }
@@ -119,11 +117,11 @@ func (m *Manager) Decode(shard_paths []string, outpath string){
 		i++
 	}
 
-	m.inv = create_inverse(m.mat, row_indexes)
+	inv := create_inverse(m.mat, row_indexes)
 
 	for chunky := range c_encoded_data{
 		for ix:=0; ix<chunky.size; ix+=int(m.n) {
-			data_word := decode_word(m.inv, chunky.data[ix:ix+int(m.n)]) //decoded
+			data_word := decode_word(inv, chunky.data[ix:ix+int(m.n)]) //decoded
 			for _, b := range data_word { //send to writer
 				c_writer <- b
 			}

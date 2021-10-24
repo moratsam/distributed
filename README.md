@@ -122,7 +122,7 @@ division by id(+) not defined.
 
 
 #### Finite field Zp:
-* lemma: Rows in permutation table except row 0 are permutations of [p-1]:
+* Lemma 1: Rows in permutation table except row 0 are permutations of [p-1].
 
 PROOF: Suppose not. Suppose x*a = x*b. Then x(a-b) = 0 is divisor of zero. //
 
@@ -170,23 +170,24 @@ The outcome of this operation must by divided by the prime polynomial to ensure 
 
 example: a=33, b=191, prime=0x11d
 ```
-		00100001 #a
-	 * 10111111 #b
+  00100001 #a
+* 10111111 #b
   =================
-	 _____10111111 #this is the rightmost '1' in a; the free coefficient in the polynomial so just *b* multiplied by 1
-  ^ 10111111_____ #this is the second '1'. Here x is raised to the power of 5 so just shift b 5 times. 
-    1011101011111 #normal multiplication is finished, result exceeds 2^8 -1
+   _____10111111 #this is the rightmost '1' in a; the free coefficient in the polynomial so just *b* multiplied by 1
+^ 10111111_____ #this is the second '1'. Here x is raised to the power of 5 so just shift b 5 times. 
+  1011101011111 #normal multiplication is finished, result exceeds 2^8 -1
 
 
 	
- 	 1011101011111 #it needs to be divided by the prime to arrive back in GF(2^8)
-  / 100011101____ #this is 0x11d
+  # I try to align the divisor with the first 1 from the dividend, to ease understanding
+  1011101011111 #it needs to be divided by the prime to arrive back in GF(2^8)
+/ 100011101____ #this is 0x11d
   =================
-  	 0011010001111 #still > 2^8 -1, so repeat
-  ^   100011101__
-	 0001011111011 #repeat
-  ^    100011101_
-    0000011000001 # = 193 < 2^8 -1, end
+  0011010001111 #still > 2^8 -1, so repeat
+^   100011101__ #I al
+  0001011111011 #repeat
+^    100011101_
+  0000011000001 # = 193 < 2^8 -1, end
 ```
 
 A generator *g* of a field is an element of the field such that every other element of the field can be expressed as a series of iterative multiplications of *g*. In this way, *g* is said to generate the field.
@@ -224,7 +225,18 @@ v) Reconstruct [data] by multiplying submat^-1 * [subenc]
 
 The main difficulty with these scheme is that mat must have the property that every possible submat must be invertible. I used a standard cauchy matrix for this purpose. Authors recommend appending an identity matrix to the top, to cleanly separate the encoded data into data shards and parity shards. I disregarded this and used a complete cauchy matrix so every shard is encoded.
 
-I implemented the matrix inversion using LU decomposition, of course with the twist that matrix values are polynomials over GF(2^8).
+I implemented the matrix inversion using LU decomposition, of course with the twist that matrix values are polynomials over GF(2^8) and all operations also take place in that field.
+
+
+
+Some notes:
+
+* Any sumbatrix of my original cauchy matrix is a viable cauchy matrix.
+* Picture 1 rewrites a cauchy matrix as a product using vandermonde matrixes.
+* Picture 2 gives formula for the determinant of a (square) cauchy matrix.
+* The derivation defines a cauchy matrix as subtracting different indexed items, whereas I implemented it as additions. The derivation still applies because under GF subtraction and addition are equivalent.
+* Since x and y terms are pairwise-disjunct by definition, the derived determinant will always be different from zero, which means it is indeed invertible.
+
 
 #### Code
 
