@@ -228,12 +228,16 @@ The main difficulty with these scheme is that mat must have the property that ev
 I implemented the matrix inversion using LU decomposition, of course with the twist that matrix values are polynomials over GF(2^8) and all operations also take place in that field.
 
 
+![ec1](https://user-images.githubusercontent.com/43090095/138609366-a6258490-2764-4a07-8c83-9b28ee44b800.jpg)
+
+![ec2](https://user-images.githubusercontent.com/43090095/138609362-78657857-64a6-4241-ac90-8cefb1d2dd4f.jpg)
+
 
 Some notes:
 
 * Any sumbatrix of my original cauchy matrix is a viable cauchy matrix.
 * Picture 1 rewrites a cauchy matrix as a product using vandermonde matrixes.
-* Picture 2 gives formula for the determinant of a (square) cauchy matrix.
+* Picture 2 proves that a cauchy matrix is invertible by providing a formula for the determinant of a (square) cauchy matrix.
 * The derivation defines a cauchy matrix as subtracting different indexed items, whereas I implemented it as additions. The derivation still applies because under GF subtraction and addition are equivalent.
 * Since x and y terms are pairwise-disjunct by definition, the derived determinant will always be different from zero, which means it is indeed invertible.
 
