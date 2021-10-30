@@ -1,10 +1,10 @@
 package main
 import (
 	"fmt"
-	_"math/rand"
+	"math/rand"
 	_"strconv"
 	_"sync"
-	_"time"
+	"time"
 
 	_"github.com/pkg/errors"
 	"go.uber.org/zap"
@@ -47,13 +47,13 @@ func (m *Manager) poly_eval(x byte) byte {
 		for z:=0; z<ix; z++{ //power up x
 			powered_x = mul(powered_x, x)
 		}
-		m.logger.Debug("", zap.Uint8("coef", coef), zap.Uint8("value here", mul(coef, powered_x)))
+//		m.logger.Debug("", zap.Uint8("coef", coef), zap.Uint8("value here", mul(coef, powered_x)))
 		value = add(value, mul(coef, powered_x))
-		m.logger.Debug("", zap.Uint8("coef", coef), zap.Uint8("total value here", value))
+//		m.logger.Debug("", zap.Uint8("coef", coef), zap.Uint8("total value here", value))
 	}
 
-	m.logger.Debug("", zap.Uint8("x", x), zap.Uint8("poly evaluated at x", value))
-	m.logger.Debug("\n\n")
+//	m.logger.Debug("", zap.Uint8("x", x), zap.Uint8("poly evaluated at x", value))
+//	m.logger.Debug("\n\n")
 	return value
 }
 
@@ -74,34 +74,57 @@ func (m *Manager) interpolate(points []point) byte {
 			}
 			part_numerator := points[i].x
 			part_denominator := add(points[ix].x, points[i].x)
-			fmt.Println(points[i])
-			m.logger.Debug("", zap.Int("coef", ix), zap.Int("part", i), zap.Uint8("part num", part_numerator), zap.Uint8("part_denom", part_denominator))
+//			m.logger.Debug("", zap.Int("coef", ix), zap.Int("part", i), zap.Uint8("part num", part_numerator), zap.Uint8("part_denom", part_denominator))
 			lagrange_basis_coef[ix] = mul(lagrange_basis_coef[ix], div(part_numerator, part_denominator))
 		}
-		m.logger.Debug("", zap.Uint8("lagrange coef", lagrange_basis_coef[ix]))
-		m.logger.Debug("", zap.Uint8("y * lagrange_coef", mul(points[ix].y, lagrange_basis_coef[ix])))
-		m.logger.Debug("\n")
+//		m.logger.Debug("", zap.Uint8("lagrange coef", lagrange_basis_coef[ix]))
+//		m.logger.Debug("", zap.Uint8("y * lagrange_coef", mul(points[ix].y, lagrange_basis_coef[ix])))
+//		m.logger.Debug("\n")
 		ss = add(ss, mul(points[ix].y, lagrange_basis_coef[ix]))
 	}
 
 	return ss
 }
 
-func main() {
+func test(k, n byte, times int) {
+	for t:=0; t < times; t++ {
+		rand.Seed(time.Now().UnixNano())
 
-	fmt.Println(div(12, 10))
-	fmt.Println(div(4, 14))
-	fmt.Println(div(3, 27))
+		poly := make([]byte, k) //create a random polynom
+		for i := range(poly){
+			poly[i] = byte(rand.Intn(256))
+		}
 
-	m := NewManager(3, 4, 17)
+		secret := poly[0] //note its secret
+		m := NewManager(k, n, secret)
+		m.poly = poly
 
-	points := make([]point, m.n)
-	for ix := range(points){ //points go from 1 onwards, because poly(0) = secret !
-		points[ix].x = byte(1+ix)
-		points[ix].y = m.poly_eval(points[ix].x)
+		points := make([]point, m.n) //evaluate polynom at points 1 to n
+		for ix := range(points){ //points go from 1 onwards, because poly(0) = secret !
+			points[ix].x = byte(1+ix)
+			points[ix].y = m.poly_eval(points[ix].x)
+		}
+
+		//create random subset of points to use in interpolation
+		points_subset := make([]point, m.k)
+		for i, point_ix := range rand.Perm(int(m.n)){
+			if i == int(m.k) {
+				break
+			}
+			points_subset[i] = points[point_ix]
+		}
+
+		ss := m.interpolate(points_subset) //interpolate the secret
+		if ss != secret {
+			panic("interpolated secret does not equal original")
+		}
 	}
+}
 
-	points_subset := []point{points[2], points[1], points[0]}
-	ss := m.interpolate(points_subset)
-	fmt.Println("\n\n", ss)
+
+func main() {
+	fmt.Println(mul(5, 7))
+
+	k, n := byte(5), byte(15)
+	test(k, n, 100000)
 }
