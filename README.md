@@ -242,11 +242,52 @@ Some notes:
 * Since x and y terms are pairwise-disjunct by definition, the derived determinant will always be different from zero, which means it is indeed invertible.
 
 
-#### Code
+### Code
 
-The code is pretty straight forward.
-First, a cauchy matrix is constructed.
-Then, a routine reads the file with input data and passes it on to the encoder.
+* io.go implements parallel reading and writing to files
+
+* gf\_arithmetic.go implements add, sub, mul, div over GF(2^8)
+
+* reed\_solomon.go contains the heart of the project. It implements cauchy matrix creation, LU decomposition and matrix inversion and the decoding of encoded data.
+
+* manager.go represents the out-facing side of the project. It provides a Manager through which one can invoke the Encode and Decode functions to perform reed-solomon encoding / encoding.
+
+
+###### Encode
+A cauchy matrix is constructed, when the Manager is initated and before Encode() is even called.
+
+Takes as argument the path to a file which seeks to be encoded.
+Returns the filepaths to the encoded shards.
+
+A routine reads the file with input data and passes it on to the encoder.
 The encoder spawns (n+k) sub-encoding routines - one for each row of the cauchy matrix.
 Taking words of size n (n-words) from the incoming data, each routine calculates the dot product between the n-word and its row of the cauchy matrix.
-Then each sub-encoder sends the data to a file writer routine, which writes the encoded data to a file - for a total of (n+k) files.
+Then each sub-encoder sends the data to a file writer routine, which writes the encoded data to a file - for a total of (n+k) shards.
+
+**See the code for more detailed comments**
+
+###### Decode
+
+Takes 2 arguments: the filepaths to the shards and a name for the output file (which will be created).
+
+First, all the shards are opened and their first byte read to find the indexes of the cauchy matrix rows that were used to create them.
+These indexes are then used to create the appropriate cauchy sub-matrix.
+An inverse of the sub-matrix is then calculated using LU decomposition.
+Then, data is passed from the shards, one word at a time and is decoded using the inverted sub-matrix.
+The decoded data is passed to the writer routine.
+
+**See the code for more detailed comments**
+
+
+## Shamir's secret sharing
+
+One has a secret that one wishes to share between *n* people.
+However, none of these *n* people can find the secret by themselves.
+Instead, any *k* of these people must come together and combine their secrets to obtain the final secret.
+
+Super easy to understand: Construct a random polynomial *f(x)* of degree *(k-1)* and insert the secret as its constant term (the coefficient next to x^0). As per Lagrange's theorem, given any *k* points **(xi, f(xi))** one can reconstruct the polynomial f(x).
+So simply evaluate the polynomial at some *n* pre-determined points (e.g. from 1 to n) and give each of the *n* people their pair **(xi, f(xi)**.
+
+
+Super easy to implement, since I reused the Galois Field arithmetic code originally written for *erasure codes*.
+The secret (constant term) was found using the standard Lagrange polynomial interpolation. Since for Shamir's secret sharing scheme one is only interested in the constant term, the creation of the Lagrange base polynomials can be optimised considerably (Basically, only the constant term of the base polynomials needs to be calculated).
