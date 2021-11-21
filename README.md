@@ -3,7 +3,22 @@
 Implementation of some algos, math concepts
 
 
+## Note: This is the current layout of the repo:
+
+*	**cluster** contains my work on writing distributed system from the ground up, which I will eventually use to test other projects within this repo.
+I am moving away from *libp2p* because deploying *libp2p* nodes to kubernetes leads to double-NAT-ing, which fucks with *libp2p*'s service discovery.
+
+* **erasure_codes** is a stand-alone project, contains everything dealing with the implementation of Reed-Solomon erasure codes.
+
+* **ssecret_sharing** is a stand-alone project, contains everything dealing with the implementation of Shamir's secret sharing.
+
+* **everything else** is a stand-alone project, containing the implementation of nodes which depend on *libp2p*. This can be used to run Bracha's reliable broadcast, which is implemented in **rbc0*.
+
+
 ### HOWTO
+
+### Note: this section deals with the **everything else** part of the repo
+
 
 Execute the bootstrap bash script. It will use the distry-bootstrap.privkey to generate its identity. Then you can use the bash commands in the **bash** dir to spin up additional nodes and execute some services. You may have to change the IP in the bash scripts to match the IP of your bootstrap node.
 

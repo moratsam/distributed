@@ -1,0 +1,26 @@
+syntax = "proto3";
+package queue.v1;
+option go_package = "github.com/moratsam/distry/api/queue_v1";
+
+service Queue{
+	rpc Subscribe(SubscriptionRequest) returns (stream Message) {}
+	rpc Publish(stream Message) returns (stream Ack) {}
+}
+
+message Ack {
+	bool ok = 1;
+}
+
+
+enum MsgType{
+	VANILLA = 0;
+}
+
+message Message {
+	MsgType type = 1;
+	string data = 2;
+}
+
+message SubscriptionRequest{
+	MsgType type = 1;
+}
