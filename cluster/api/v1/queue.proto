@@ -4,7 +4,7 @@ option go_package = "github.com/moratsam/distry/api/queue_v1";
 
 service Queue{
 	rpc Subscribe(SubscriptionRequest) returns (stream Message) {}
-	rpc Publish(stream Message) returns (stream Ack) {}
+	rpc Publish(Message) returns (Ack) {}
 }
 
 message Ack {

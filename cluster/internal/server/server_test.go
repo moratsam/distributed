@@ -15,20 +15,23 @@ import (
 func TestServer(t *testing.T){
 	for scenario, fn := range map[string]func(
 		t *testing.T,
-		client api.QueueClient,
+		client1 api.QueueClient,
+		client2 api.QueueClient,
 	){
 		"subscribe and hear own publication": testSubscribeToSelf,
+		"subscribe and hear another's publication": testSubscribeAndHearAnother,
 	} {
 		t.Run(scenario, func(t *testing.T){
-			client, teardown := setupTest(t, nil)
+			client1, client2, teardown := setupTest(t, nil)
 			defer teardown()
-			fn(t, client)
+			fn(t, client1, client2)
 		})
 	}
 }
 
 func setupTest(t *testing.T, fn func()) (
 	client	api.QueueClient,
+	client2	api.QueueClient,
 	teardown	func(),
 ) {
 	t.Helper()
@@ -48,15 +51,16 @@ func setupTest(t *testing.T, fn func()) (
 	}()
 
 	client = api.NewQueueClient(cc)
+	client2 = api.NewQueueClient(cc)
 	
-	return client, func(){
+	return client, client2, func(){
 		server.Stop()
 		cc.Close()
 		l.Close()
 	}
 }
 
-func testSubscribeToSelf(t *testing.T, client api.QueueClient){
+func testSubscribeToSelf(t *testing.T, client, _ api.QueueClient){
 	ctx := context.Background()
 	//get sub stream
 	sub_stream, err := client.Subscribe(
@@ -67,19 +71,14 @@ func testSubscribeToSelf(t *testing.T, client api.QueueClient){
 	)
 	require.NoError(t, err)
 
-	//get pub stream
-	pub_stream, err := client.Publish(ctx)
-	require.NoError(t, err)
-
-	//publish msg on pub_stream
-	err = pub_stream.Send(&api.Message{
-		Type: api.MsgType_VANILLA,
-		Data: "AI reconquista",
-	})
-	require.NoError(t, err)
-
-	//receive ack
-	ack, err := pub_stream.Recv()
+	//publish msg, receive ack
+	ack, err := client.Publish(
+		ctx, 
+		&api.Message{
+			Type: api.MsgType_VANILLA,
+			Data: "AI reconquista",
+		},
+	)
 	require.NoError(t, err)
 	if ack.Ok != true {
 		t.Fatalf("got ok: %v, expected: %v", ack.Ok, true)
@@ -94,5 +93,41 @@ func testSubscribeToSelf(t *testing.T, client api.QueueClient){
 	if msg.Data != "AI reconquista" {
 		t.Fatalf("got msg data: %v, expected: %v", msg.Data, "AI reconquista")
 	}
-
 }
+
+func testSubscribeAndHearAnother(t *testing.T, client1, client2 api.QueueClient){
+	ctx := context.Background()
+
+	//client1 gets sub stream
+	sub_stream, err := client1.Subscribe(
+		ctx,
+		&api.SubscriptionRequest{
+			Type: api.MsgType_VANILLA,
+		},
+	)
+	require.NoError(t, err)
+
+	//client2 published msg
+	ack, err := client2.Publish(
+		ctx,
+		&api.Message{
+			Type: api.MsgType_VANILLA,
+			Data: "kurbarija",
+		},
+	)
+	require.NoError(t, err)
+	if ack.Ok != true {
+		t.Fatalf("got ok %v, expected %v", ack.Ok, true)
+	}
+
+	//client1 receives client2's publication
+	msg, err := sub_stream.Recv()
+	require.NoError(t, err)
+	if msg.Type != api.MsgType_VANILLA {
+		t.Fatalf("got msg type: %v, expected: %v", msg.Type, api.MsgType_VANILLA)
+	}
+	if msg.Data != "kurbarija" {
+		t.Fatalf("got msg data: %v, expected: %v", msg.Data, "kurbarija")
+	}
+}
+

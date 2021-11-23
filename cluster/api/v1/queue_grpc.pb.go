@@ -18,7 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type QueueClient interface {
 	Subscribe(ctx context.Context, in *SubscriptionRequest, opts ...grpc.CallOption) (Queue_SubscribeClient, error)
-	Publish(ctx context.Context, opts ...grpc.CallOption) (Queue_PublishClient, error)
+	Publish(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Ack, error)
 }
 
 type queueClient struct {
@@ -61,35 +61,13 @@ func (x *queueSubscribeClient) Recv() (*Message, error) {
 	return m, nil
 }
 
-func (c *queueClient) Publish(ctx context.Context, opts ...grpc.CallOption) (Queue_PublishClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_Queue_serviceDesc.Streams[1], "/queue.v1.Queue/Publish", opts...)
+func (c *queueClient) Publish(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Ack, error) {
+	out := new(Ack)
+	err := c.cc.Invoke(ctx, "/queue.v1.Queue/Publish", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &queuePublishClient{stream}
-	return x, nil
-}
-
-type Queue_PublishClient interface {
-	Send(*Message) error
-	Recv() (*Ack, error)
-	grpc.ClientStream
-}
-
-type queuePublishClient struct {
-	grpc.ClientStream
-}
-
-func (x *queuePublishClient) Send(m *Message) error {
-	return x.ClientStream.SendMsg(m)
-}
-
-func (x *queuePublishClient) Recv() (*Ack, error) {
-	m := new(Ack)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
+	return out, nil
 }
 
 // QueueServer is the server API for Queue service.
@@ -97,7 +75,7 @@ func (x *queuePublishClient) Recv() (*Ack, error) {
 // for forward compatibility
 type QueueServer interface {
 	Subscribe(*SubscriptionRequest, Queue_SubscribeServer) error
-	Publish(Queue_PublishServer) error
+	Publish(context.Context, *Message) (*Ack, error)
 	mustEmbedUnimplementedQueueServer()
 }
 
@@ -108,8 +86,8 @@ type UnimplementedQueueServer struct {
 func (UnimplementedQueueServer) Subscribe(*SubscriptionRequest, Queue_SubscribeServer) error {
 	return status.Errorf(codes.Unimplemented, "method Subscribe not implemented")
 }
-func (UnimplementedQueueServer) Publish(Queue_PublishServer) error {
-	return status.Errorf(codes.Unimplemented, "method Publish not implemented")
+func (UnimplementedQueueServer) Publish(context.Context, *Message) (*Ack, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Publish not implemented")
 }
 func (UnimplementedQueueServer) mustEmbedUnimplementedQueueServer() {}
 
@@ -145,47 +123,38 @@ func (x *queueSubscribeServer) Send(m *Message) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _Queue_Publish_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(QueueServer).Publish(&queuePublishServer{stream})
-}
-
-type Queue_PublishServer interface {
-	Send(*Ack) error
-	Recv() (*Message, error)
-	grpc.ServerStream
-}
-
-type queuePublishServer struct {
-	grpc.ServerStream
-}
-
-func (x *queuePublishServer) Send(m *Ack) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func (x *queuePublishServer) Recv() (*Message, error) {
-	m := new(Message)
-	if err := x.ServerStream.RecvMsg(m); err != nil {
+func _Queue_Publish_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Message)
+	if err := dec(in); err != nil {
 		return nil, err
 	}
-	return m, nil
+	if interceptor == nil {
+		return srv.(QueueServer).Publish(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/queue.v1.Queue/Publish",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueueServer).Publish(ctx, req.(*Message))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 var _Queue_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "queue.v1.Queue",
 	HandlerType: (*QueueServer)(nil),
-	Methods:     []grpc.MethodDesc{},
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Publish",
+			Handler:    _Queue_Publish_Handler,
+		},
+	},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "Subscribe",
 			Handler:       _Queue_Subscribe_Handler,
 			ServerStreams: true,
-		},
-		{
-			StreamName:    "Publish",
-			Handler:       _Queue_Publish_Handler,
-			ServerStreams: true,
-			ClientStreams: true,
 		},
 	},
 	Metadata: "api/v1/queue.proto",
