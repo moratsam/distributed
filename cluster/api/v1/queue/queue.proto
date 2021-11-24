@@ -2,7 +2,7 @@ syntax = "proto3";
 package queue.v1;
 option go_package = "github.com/moratsam/distry/cluster/api/queue_v1";
 
-import "api/v1/msg.proto";
+import "api/v1/msg/msg.proto";
 
 service Queue{
 	rpc Subscribe(SubscriptionRequest) returns (stream msg.v1.Msg) {}

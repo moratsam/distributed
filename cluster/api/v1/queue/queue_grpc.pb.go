@@ -158,5 +158,5 @@ var _Queue_serviceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 	},
-	Metadata: "api/v1/queue.proto",
+	Metadata: "api/v1/queue/queue.proto",
 }
