@@ -1,6 +1,6 @@
 syntax = "proto3";
 package msg.v1;
-option go_package = "github.com/moratsam/distry/api/msg_v1";
+option go_package = "github.com/moratsam/distry/cluster/api/msg_v1";
 
 enum MsgType{
 	VANILLA = 0;

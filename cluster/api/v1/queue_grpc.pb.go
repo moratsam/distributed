@@ -4,7 +4,7 @@ package queue_v1
 
 import (
 	context "context"
-	msg_v1 "github.com/moratsam/distry/api/msg_v1"
+	msg_v1 "github.com/moratsam/distry/cluster/api/msg_v1"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
