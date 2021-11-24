@@ -4,11 +4,11 @@
 // 	protoc        v3.17.3
 // source: api/v1/queue/queue.proto
 
-package queue_v1
+package queue
 
 import (
 	proto "github.com/golang/protobuf/proto"
-	msg_v1 "github.com/moratsam/distry/cluster/api/msg_v1"
+	msg "github.com/moratsam/distry/cluster/api/v1/msg"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -78,7 +78,7 @@ type SubscriptionRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Type msg_v1.MsgType `protobuf:"varint,1,opt,name=type,proto3,enum=msg.v1.MsgType" json:"type,omitempty"`
+	Type msg.MsgType `protobuf:"varint,1,opt,name=type,proto3,enum=msg.v1.MsgType" json:"type,omitempty"`
 }
 
 func (x *SubscriptionRequest) Reset() {
@@ -113,11 +113,11 @@ func (*SubscriptionRequest) Descriptor() ([]byte, []int) {
 	return file_api_v1_queue_queue_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *SubscriptionRequest) GetType() msg_v1.MsgType {
+func (x *SubscriptionRequest) GetType() msg.MsgType {
 	if x != nil {
 		return x.Type
 	}
-	return msg_v1.MsgType_VANILLA
+	return msg.MsgType_VANILLA
 }
 
 var File_api_v1_queue_queue_proto protoreflect.FileDescriptor
@@ -141,7 +141,7 @@ var file_api_v1_queue_queue_proto_rawDesc = []byte{
 	0x65, 0x75, 0x65, 0x2e, 0x76, 0x31, 0x2e, 0x41, 0x63, 0x6b, 0x22, 0x00, 0x42, 0x31, 0x5a, 0x2f,
 	0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x6d, 0x6f, 0x72, 0x61, 0x74,
 	0x73, 0x61, 0x6d, 0x2f, 0x64, 0x69, 0x73, 0x74, 0x72, 0x79, 0x2f, 0x63, 0x6c, 0x75, 0x73, 0x74,
-	0x65, 0x72, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x71, 0x75, 0x65, 0x75, 0x65, 0x5f, 0x76, 0x31, 0x62,
+	0x65, 0x72, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x76, 0x31, 0x2f, 0x71, 0x75, 0x65, 0x75, 0x65, 0x62,
 	0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
@@ -161,8 +161,8 @@ var file_api_v1_queue_queue_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_api_v1_queue_queue_proto_goTypes = []interface{}{
 	(*Ack)(nil),                 // 0: queue.v1.Ack
 	(*SubscriptionRequest)(nil), // 1: queue.v1.SubscriptionRequest
-	(msg_v1.MsgType)(0),         // 2: msg.v1.MsgType
-	(*msg_v1.Msg)(nil),          // 3: msg.v1.Msg
+	(msg.MsgType)(0),            // 2: msg.v1.MsgType
+	(*msg.Msg)(nil),             // 3: msg.v1.Msg
 }
 var file_api_v1_queue_queue_proto_depIdxs = []int32{
 	2, // 0: queue.v1.SubscriptionRequest.type:type_name -> msg.v1.MsgType

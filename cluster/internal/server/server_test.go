@@ -9,14 +9,15 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 
-	api "github.com/moratsam/distry/cluster/api/v1"
+	api_msg "github.com/moratsam/distry/cluster/api/v1/msg"
+	api_queue "github.com/moratsam/distry/cluster/api/v1/queue"
 )
 
 func TestServer(t *testing.T){
 	for scenario, fn := range map[string]func(
 		t *testing.T,
-		client1 api.QueueClient,
-		client2 api.QueueClient,
+		client1 api_queue.QueueClient,
+		client2 api_queue.QueueClient,
 	){
 		"subscribe and hear own publication": testSubscribeToSelf,
 		"subscribe and hear another's publication": testSubscribeAndHearAnother,
@@ -30,8 +31,8 @@ func TestServer(t *testing.T){
 }
 
 func setupTest(t *testing.T, fn func()) (
-	client	api.QueueClient,
-	client2	api.QueueClient,
+	client	api_queue.QueueClient,
+	client2	api_queue.QueueClient,
 	teardown	func(),
 ) {
 	t.Helper()
@@ -50,8 +51,8 @@ func setupTest(t *testing.T, fn func()) (
 		server.Serve(l)
 	}()
 
-	client = api.NewQueueClient(cc)
-	client2 = api.NewQueueClient(cc)
+	client = api_queue.NewQueueClient(cc)
+	client2 = api_queue.NewQueueClient(cc)
 	
 	return client, client2, func(){
 		server.Stop()
@@ -60,13 +61,13 @@ func setupTest(t *testing.T, fn func()) (
 	}
 }
 
-func testSubscribeToSelf(t *testing.T, client, _ api.QueueClient){
+func testSubscribeToSelf(t *testing.T, client, _ api_queue.QueueClient){
 	ctx := context.Background()
 	//get sub stream
 	sub_stream, err := client.Subscribe(
 		ctx,
-		&api.SubscriptionRequest{
-			Type: api.MsgType_VANILLA,
+		&api_queue.SubscriptionRequest{
+			Type: api_msg.MsgType_VANILLA,
 		},
 	)
 	require.NoError(t, err)
@@ -74,8 +75,8 @@ func testSubscribeToSelf(t *testing.T, client, _ api.QueueClient){
 	//publish msg, receive ack
 	ack, err := client.Publish(
 		ctx, 
-		&api.Message{
-			Type: api.MsgType_VANILLA,
+		&api_msg.Msg{
+			Type: api_msg.MsgType_VANILLA,
 			Data: "AI reconquista",
 		},
 	)
@@ -87,22 +88,22 @@ func testSubscribeToSelf(t *testing.T, client, _ api.QueueClient){
 	//receive msg from sub_stream
 	msg, err := sub_stream.Recv()
 	require.NoError(t, err)
-	if msg.Type != api.MsgType_VANILLA {
-		t.Fatalf("got msg type: %v, expected: %v", msg.Type, api.MsgType_VANILLA)
+	if msg.Type != api_msg.MsgType_VANILLA {
+		t.Fatalf("got msg type: %v, expected: %v", msg.Type, api_msg.MsgType_VANILLA)
 	}
 	if msg.Data != "AI reconquista" {
 		t.Fatalf("got msg data: %v, expected: %v", msg.Data, "AI reconquista")
 	}
 }
 
-func testSubscribeAndHearAnother(t *testing.T, client1, client2 api.QueueClient){
+func testSubscribeAndHearAnother(t *testing.T, client1, client2 api_queue.QueueClient){
 	ctx := context.Background()
 
 	//client1 gets sub stream
 	sub_stream, err := client1.Subscribe(
 		ctx,
-		&api.SubscriptionRequest{
-			Type: api.MsgType_VANILLA,
+		&api_queue.SubscriptionRequest{
+			Type: api_msg.MsgType_VANILLA,
 		},
 	)
 	require.NoError(t, err)
@@ -110,8 +111,8 @@ func testSubscribeAndHearAnother(t *testing.T, client1, client2 api.QueueClient)
 	//client2 published msg
 	ack, err := client2.Publish(
 		ctx,
-		&api.Message{
-			Type: api.MsgType_VANILLA,
+		&api_msg.Msg{
+			Type: api_msg.MsgType_VANILLA,
 			Data: "kurbarija",
 		},
 	)
@@ -123,8 +124,8 @@ func testSubscribeAndHearAnother(t *testing.T, client1, client2 api.QueueClient)
 	//client1 receives client2's publication
 	msg, err := sub_stream.Recv()
 	require.NoError(t, err)
-	if msg.Type != api.MsgType_VANILLA {
-		t.Fatalf("got msg type: %v, expected: %v", msg.Type, api.MsgType_VANILLA)
+	if msg.Type != api_msg.MsgType_VANILLA {
+		t.Fatalf("got msg type: %v, expected: %v", msg.Type, api_msg.MsgType_VANILLA)
 	}
 	if msg.Data != "kurbarija" {
 		t.Fatalf("got msg data: %v, expected: %v", msg.Data, "kurbarija")

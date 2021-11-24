@@ -7,17 +7,18 @@ import (
 	"google.golang.org/grpc"
 	"go.uber.org/zap"
 
-	api "github.com/moratsam/distry/cluster/api/v1"
+	api_msg "github.com/moratsam/distry/cluster/api/v1/msg"
+	api_queue "github.com/moratsam/distry/cluster/api/v1/queue"
 )
 
-var _ api.QueueServer = (*grpcServer)(nil)
+var _ api_queue.QueueServer = (*grpcServer)(nil)
 
 type grpcServer struct {
-	api.UnimplementedQueueServer
+	api_queue.UnimplementedQueueServer
 
 	logger			*zap.Logger
 	mu 				sync.Mutex
-	subscriber_map map[api.MsgType] []*api.Queue_SubscribeServer
+	subscriber_map map[api_msg.MsgType] []*api_queue.Queue_SubscribeServer
 }
 
 func NewGRPCServer() (*grpc.Server, error){
@@ -26,21 +27,21 @@ func NewGRPCServer() (*grpc.Server, error){
 	if err != nil {
 		return nil, err
 	}
-	api.RegisterQueueServer(gsrv, srv)
+	api_queue.RegisterQueueServer(gsrv, srv)
 	return gsrv, nil
 }
 
 func newgrpcServer() (*grpcServer, error) {
 	srv := &grpcServer{
 		logger:				zap.L().Named("server"),
-		subscriber_map:	make(map[api.MsgType] []*api.Queue_SubscribeServer),
+		subscriber_map:	make(map[api_msg.MsgType] []*api_queue.Queue_SubscribeServer),
 	}
 	return srv, nil
 }
 
 //broadcast message to every subscriber
 //TODO can I use just read lock before broadcasting?
-func (s *grpcServer) broadcast(msg *api.Message) {
+func (s *grpcServer) broadcast(msg *api_msg.Msg) {
 	msg_type := msg.GetType()
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -53,25 +54,25 @@ func (s *grpcServer) broadcast(msg *api.Message) {
 }
 
 //someone published something, so republish it to subscribers and send ack
-func (s *grpcServer) Publish(ctx context.Context, msg *api.Message) (*api.Ack, error) {
+func (s *grpcServer) Publish(ctx context.Context, msg *api_msg.Msg) (*api_queue.Ack, error) {
 
 		go s.broadcast(msg)
 
-		res := &api.Ack{Ok: true}
+		res := &api_queue.Ack{Ok: true}
 		return res, nil
 }
 
 //someone sent a subscription request, so add him to subscriber_map
 func (s *grpcServer) Subscribe(
-	req		*api.SubscriptionRequest,
-	stream	api.Queue_SubscribeServer,
+	req		*api_queue.SubscriptionRequest,
+	stream	api_queue.Queue_SubscribeServer,
 ) error {
 
 	s.mu.Lock()
 	
 	msg_type := req.GetType()
 	if len(s.subscriber_map[msg_type]) == 0 {
-		s.subscriber_map[msg_type] = make([]*api.Queue_SubscribeServer, 0, 15)
+		s.subscriber_map[msg_type] = make([]*api_queue.Queue_SubscribeServer, 0, 15)
 	}
 	s.subscriber_map[msg_type] = append(s.subscriber_map[msg_type], &stream)
 
