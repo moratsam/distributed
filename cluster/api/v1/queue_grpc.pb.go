@@ -4,6 +4,7 @@ package queue_v1
 
 import (
 	context "context"
+	msg_v1 "github.com/moratsam/distry/api/msg_v1"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -18,7 +19,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type QueueClient interface {
 	Subscribe(ctx context.Context, in *SubscriptionRequest, opts ...grpc.CallOption) (Queue_SubscribeClient, error)
-	Publish(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Ack, error)
+	Publish(ctx context.Context, in *msg_v1.Msg, opts ...grpc.CallOption) (*Ack, error)
 }
 
 type queueClient struct {
@@ -45,7 +46,7 @@ func (c *queueClient) Subscribe(ctx context.Context, in *SubscriptionRequest, op
 }
 
 type Queue_SubscribeClient interface {
-	Recv() (*Message, error)
+	Recv() (*msg_v1.Msg, error)
 	grpc.ClientStream
 }
 
@@ -53,15 +54,15 @@ type queueSubscribeClient struct {
 	grpc.ClientStream
 }
 
-func (x *queueSubscribeClient) Recv() (*Message, error) {
-	m := new(Message)
+func (x *queueSubscribeClient) Recv() (*msg_v1.Msg, error) {
+	m := new(msg_v1.Msg)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
 	return m, nil
 }
 
-func (c *queueClient) Publish(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Ack, error) {
+func (c *queueClient) Publish(ctx context.Context, in *msg_v1.Msg, opts ...grpc.CallOption) (*Ack, error) {
 	out := new(Ack)
 	err := c.cc.Invoke(ctx, "/queue.v1.Queue/Publish", in, out, opts...)
 	if err != nil {
@@ -75,7 +76,7 @@ func (c *queueClient) Publish(ctx context.Context, in *Message, opts ...grpc.Cal
 // for forward compatibility
 type QueueServer interface {
 	Subscribe(*SubscriptionRequest, Queue_SubscribeServer) error
-	Publish(context.Context, *Message) (*Ack, error)
+	Publish(context.Context, *msg_v1.Msg) (*Ack, error)
 	mustEmbedUnimplementedQueueServer()
 }
 
@@ -86,7 +87,7 @@ type UnimplementedQueueServer struct {
 func (UnimplementedQueueServer) Subscribe(*SubscriptionRequest, Queue_SubscribeServer) error {
 	return status.Errorf(codes.Unimplemented, "method Subscribe not implemented")
 }
-func (UnimplementedQueueServer) Publish(context.Context, *Message) (*Ack, error) {
+func (UnimplementedQueueServer) Publish(context.Context, *msg_v1.Msg) (*Ack, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Publish not implemented")
 }
 func (UnimplementedQueueServer) mustEmbedUnimplementedQueueServer() {}
@@ -111,7 +112,7 @@ func _Queue_Subscribe_Handler(srv interface{}, stream grpc.ServerStream) error {
 }
 
 type Queue_SubscribeServer interface {
-	Send(*Message) error
+	Send(*msg_v1.Msg) error
 	grpc.ServerStream
 }
 
@@ -119,12 +120,12 @@ type queueSubscribeServer struct {
 	grpc.ServerStream
 }
 
-func (x *queueSubscribeServer) Send(m *Message) error {
+func (x *queueSubscribeServer) Send(m *msg_v1.Msg) error {
 	return x.ServerStream.SendMsg(m)
 }
 
 func _Queue_Publish_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Message)
+	in := new(msg_v1.Msg)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -136,7 +137,7 @@ func _Queue_Publish_Handler(srv interface{}, ctx context.Context, dec func(inter
 		FullMethod: "/queue.v1.Queue/Publish",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueueServer).Publish(ctx, req.(*Message))
+		return srv.(QueueServer).Publish(ctx, req.(*msg_v1.Msg))
 	}
 	return interceptor(ctx, in, info, handler)
 }

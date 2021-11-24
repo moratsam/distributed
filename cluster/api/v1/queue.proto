@@ -2,25 +2,17 @@ syntax = "proto3";
 package queue.v1;
 option go_package = "github.com/moratsam/distry/api/queue_v1";
 
+import "api/v1/msg.proto";
+
 service Queue{
-	rpc Subscribe(SubscriptionRequest) returns (stream Message) {}
-	rpc Publish(Message) returns (Ack) {}
+	rpc Subscribe(SubscriptionRequest) returns (stream msg.v1.Msg) {}
+	rpc Publish(msg.v1.Msg) returns (Ack) {}
 }
 
 message Ack {
 	bool ok = 1;
 }
 
-
-enum MsgType{
-	VANILLA = 0;
-}
-
-message Message {
-	MsgType type = 1;
-	string data = 2;
-}
-
 message SubscriptionRequest{
-	MsgType type = 1;
+	msg.v1.MsgType type = 1;
 }
