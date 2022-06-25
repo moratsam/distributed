@@ -79,7 +79,6 @@ func (m *Manager) encode(c_reader chan data_chunk, c_writers []chan byte, fSize 
 		}(c_data_available[i], c_writers[i], &chunk, wg, i)
 	}
 
-	totalRead := 0
 	ok := true
 	for {
 		chunk, ok = <- c_reader //receive chunk
@@ -101,9 +100,7 @@ func (m *Manager) encode(c_reader chan data_chunk, c_writers []chan byte, fSize 
 			c <- struct{}{}
 		}
 		wg.Wait() //wait for them to finish
-		totalRead += chunk.size
 	}
-	fmt.Println("total read", totalRead)
 }
 
 //readShards will read the shards, and send back their indexes, so that the appropriate
@@ -124,7 +121,6 @@ func (m *Manager) Decode(shard_paths []string, outpath string){
 
 	padding := <- c_row_indexes
 	paddingBuf := make([]byte, 0, padding)
-	fmt.Println("read padding", padding)
 	i, row_indexes := 0, make([]int, m.n) //indexes of cauchy rows that encoded the files
 	for row_index := range c_row_indexes {
 		row_indexes[i] = row_index
@@ -133,21 +129,10 @@ func (m *Manager) Decode(shard_paths []string, outpath string){
 
 	inv := create_inverse(m.mat, row_indexes)
 
-	oo := make([]byte, 0)
-	doit := true
 	for chunky := range c_encoded_data{
-		for z := 0; z < chunky.size; z++{
-			//fmt.Println("ooo")
-			oo = append(oo, chunky.data[z])
-		}
-		if len(oo) >= 300 && doit {
-			//fmt.Println("z:", oo)
-			doit = false
-		}
 		for ix:=0; ix<chunky.size; ix+=int(m.n) {
 			enc_word := chunky.data[ix:ix+int(m.n)]
 			data_word := decode_word(inv, enc_word) //decoded
-			//fmt.Println("enc word", enc_word, "dec word", data_word)
 			for _, b := range data_word { //send to writer
 				if len(paddingBuf) != cap(paddingBuf) {
 					paddingBuf = append(paddingBuf, b)
@@ -157,7 +142,6 @@ func (m *Manager) Decode(shard_paths []string, outpath string){
 			}
 		}
 	}
-	//fmt.Println("xxxxx", oo)
 	close(c_writer)
 	for _ = range c_writer_done {} //wait for chan to close
 }
@@ -196,13 +180,13 @@ func (m *Manager) Encode(inpath string) ([]string, error) {
 
 
 func main(){
+	_ = time.Now()
 	m := NewManager(3, 7)
 	outpaths, _ := m.Encode("fajl")
 	
 
 	//create random subset of out files to use for decoding
 	//rand.Seed(time.Now().UnixNano())
-	_ = time.Now()
 	rand.Seed(3)
 	subset := make([]string, m.n)
 	for i, path_ix := range rand.Perm(int(m.k+m.n)){
@@ -215,38 +199,3 @@ func main(){
 
 	m.Decode(subset, "dekodiran")
 }
-
-
-func main1(){
-	const_CHUNK_SIZE = 121
-	inpath := "fajl.jpg"
-	outpath := "out.jpg"
-	c_reader := make(chan data_chunk) //c via which readFile() will send data
-	c_writer := make(chan byte)
-	c_writer_done := make(chan struct{})
-	
-	fi, err := os.Stat(inpath);
-	if err != nil {
-		fmt.Println("Can't get file size")
-	}
-	fSize := fi.Size()
-	fmt.Println("fsize", fSize)
-
-	go readFile(inpath, c_reader, 1)
-	go writeFile(outpath, c_writer, c_writer_done)
-
-	total := 0
-	for chunk := range c_reader{
-		for i:=0; i<chunk.size; i++ {
-			c_writer <- chunk.data[i]
-		}
-		total += chunk.size
-	}
-	close(c_writer)
-
-	 <- c_writer_done
-	 fmt.Println("total: ", total)
-
-
-}
-

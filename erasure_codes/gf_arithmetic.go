@@ -19,7 +19,7 @@ func length(a int) int {
 func mul_costly(a, b byte) byte {
 	result := 0
 	for i:=0; a>>i > 0; i++ { //iterate over the bits of a
-		if a & (1<<i) > 0 { // if current bit is 1
+		if (a & (1<<i)) > 0 { // if current bit is 1
 			result ^= int(b)<<i //xor b multiplied by this power of 2 to result
 		}
 	}
@@ -29,7 +29,7 @@ func mul_costly(a, b byte) byte {
 		return byte(result)
 	}
 	for i:=len1-len2; i > -1; i-- { //while result is not smaller than the prime
-		if result & (1<<(i+len2-1)) > 0{ //if current bit is 1
+		if (result & (1<<(i+len2-1))) > 0{ //if current bit is 1
 			result ^= prime << i //align divisor with the result and subtract its value
 		}
 	}
